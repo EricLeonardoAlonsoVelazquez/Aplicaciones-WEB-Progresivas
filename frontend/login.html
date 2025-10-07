@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbored - Monitoreo de Arbolado Urbano</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="background-container">
+        <div class="leaf leaf-1"></div>
+        <div class="leaf leaf-2"></div>
+        <div class="leaf leaf-3"></div>
+        <div class="leaf leaf-4"></div>
+        <div class="leaf leaf-5"></div>
+    </div>
+    
+    <div class="container">
+        <div class="app-header">
+            <div class="logo">
+                <i class="fas fa-tree"></i>
+                <h1>Arbolred</h1>
+            </div>
+            <p class="tagline">Sistema de Monitoreo de Arbolado Urbano</p>
+        </div>
+
+        <!-- Login -->
+        <div class="login-container card">
+            <h2>Iniciar Sesión</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" name="email" placeholder="Correo Electrónico" required>
+                    </div>
+                    <span class="error-message" id="emailError"></span>
+                </div>
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    </div>
+                    <span class="error-message" id="passwordError"></span>
+                </div>
+                <button type="submit" id="loginBtn" class="btn-primary">
+                    <span class="btn-text">Iniciar Sesión</span>
+                    <i class="fas fa-leaf btn-icon"></i>
+                </button>
+            </form>
+            <p class="switch-form">¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a></p>
+        </div>
+
+        <!-- Registro -->
+        <div class="register-container card hidden">
+            <h2>Crear Cuenta</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="regName" name="name" placeholder="Nombre Completo" required>
+                    </div>
+                    <span class="error-message" id="nameError"></span>
+                </div>
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="regEmail" name="email" placeholder="Correo Electrónico" required>
+                    </div>
+                    <span class="error-message" id="regEmailError"></span>
+                </div>
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="regPassword" name="password" placeholder="Contraseña" required>
+                    </div>
+                    <span class="error-message" id="regPasswordError"></span>
+                </div>
+                <div class="form-group">
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="regConfirmPassword" name="confirmPassword" placeholder="Confirmar Contraseña" required>
+                    </div>
+                    <span class="error-message" id="confirmPasswordError"></span>
+                </div>
+                <button type="submit" id="registerBtn" class="btn-primary">
+                    <span class="btn-text">Registrarse</span>
+                    <i class="fas fa-seedling btn-icon"></i>
+                </button>
+            </form>
+            <p class="switch-form">¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión aquí</a></p>
+        </div>
+
+        <!-- Mensajes -->
+        <div class="message-container hidden" id="messageContainer">
+            <p id="messageText"></p>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>
