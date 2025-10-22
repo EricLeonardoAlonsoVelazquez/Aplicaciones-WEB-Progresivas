@@ -2,21 +2,30 @@ version: '3.8'
 
 services:
   backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - JWT_SECRET=bdadbf29ff462ca7e0844818d628d547f019ba1590a87ddf167e4e053802815c2e19f982f68c07faaa902eda08dc301b4e6e57bfdf30f3b9d672c804d95d082e
+      - JWT_SECRET=${JWT_SECRET}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-    restart: unless-stopped
+      - ./backend/config/serviceAccountKey.json:/app/backend/config/serviceAccountKey.json:ro
+      - ./frontend:/app/frontend:ro
+    working_dir: /app/backend
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    command: node server.js
 
   frontend:
     build:
@@ -24,11 +33,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
 networks:
   app-network:

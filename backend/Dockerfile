@@ -1,25 +1,22 @@
-FROM node:16-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar archivos de dependencias primero
-COPY package*.json ./
-COPY .env ./
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
 
-# Instalar dependencias
-RUN npm install --production
+WORKDIR /app/backend
 
-# Copiar el resto de la aplicación
-COPY . .
+COPY backend/package*.json ./
+RUN npm install
 
-# Crear usuario no-root por seguridad
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+RUN mkdir -p /app/backend/config && \
+    chown -R node:node /app
 
-# Cambiar propietario de los archivos
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+USER node
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+

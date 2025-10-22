@@ -1,0 +1,33 @@
+{
+  "name": "Arbored - Monitoreo de Arbolado Urbano",
+  "short_name": "Arbored",
+  "description": "Sistema de monitoreo inteligente para el arbolado urbano mediante sensores IoT y aplicaciones web",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2d5016",
+  "theme_color": "#4a7c1f",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["environment", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/ArbolRed.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/ArbolRed.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/ArbolRed.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

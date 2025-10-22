@@ -1,12 +1,11 @@
 FROM nginx:alpine
 
-# Copiar los archivos estáticos
 COPY . /usr/share/nginx/html
 
-# Copiar configuración personalizada de nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponer puerto
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

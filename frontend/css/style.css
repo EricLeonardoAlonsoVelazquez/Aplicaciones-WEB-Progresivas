@@ -6,7 +6,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #DC143C 100%);
+    background: linear-gradient(135deg, #1a3c27 0%, #2d5e3d 50%, #3a7d52 100%);
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -28,7 +28,7 @@ body {
 
 .network-node {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     animation: pulse 8s infinite ease-in-out;
 }
@@ -39,6 +39,7 @@ body {
     top: 15%;
     left: 10%;
     animation-delay: 0s;
+    background-color: rgba(231, 76, 60, 0.3);
 }
 
 .node-2 {
@@ -47,6 +48,7 @@ body {
     top: 70%;
     left: 80%;
     animation-delay: 1s;
+    background-color: rgba(231, 76, 60, 0.2);
 }
 
 .node-3 {
@@ -55,6 +57,7 @@ body {
     top: 40%;
     left: 85%;
     animation-delay: 2s;
+    background-color: rgba(231, 76, 60, 0.25);
 }
 
 .node-4 {
@@ -71,11 +74,12 @@ body {
     top: 15%;
     left: 75%;
     animation-delay: 4s;
+    background-color: rgba(231, 76, 60, 0.2);
 }
 
 .network-line {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.1);
     height: 2px;
     transform-origin: left center;
     animation: connect 12s infinite linear;
@@ -151,14 +155,14 @@ body {
     font-size: 2.5rem;
     color: #fff;
     margin-right: 15px;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 .logo h1 {
     font-size: 2.5rem;
     color: #fff;
     font-weight: 700;
-    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .tagline {
@@ -177,24 +181,36 @@ body {
 .card {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    box-shadow: 0 15px 30px rgba(139, 0, 0, 0.3);
+    box-shadow: 0 15px 30px rgba(44, 62, 80, 0.15);
     padding: 40px 35px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, #2d5e3d, #3a7d52);
+    border-radius: 20px 20px 0 0;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(139, 0, 0, 0.4);
+    box-shadow: 0 20px 40px rgba(44, 62, 80, 0.2);
 }
 
 h2 {
     text-align: center;
     margin-bottom: 30px;
-    color: #8B0000;
+    color: #2c3e50;
     font-weight: 600;
     font-size: 1.8rem;
     position: relative;
@@ -208,7 +224,7 @@ h2:after {
     transform: translateX(-50%);
     width: 50px;
     height: 3px;
-    background: linear-gradient(to right, #8B0000, #DC143C);
+    background: linear-gradient(to right, #2d5e3d, #3a7d52);
     border-radius: 3px;
 }
 
@@ -225,7 +241,7 @@ h2:after {
 .input-with-icon i {
     position: absolute;
     left: 15px;
-    color: #B22222;
+    color: #2d5e3d;
     font-size: 1.1rem;
     z-index: 1;
 }
@@ -242,10 +258,15 @@ input {
 }
 
 input:focus {
-    border-color: #B22222;
+    border-color: #2d5e3d;
     outline: none;
     background-color: #fff;
-    box-shadow: 0 0 0 3px rgba(178, 34, 34, 0.2);
+    box-shadow: 0 0 0 3px rgba(45, 94, 61, 0.2);
+}
+
+input.error {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
 }
 
 input::placeholder {
@@ -253,7 +274,7 @@ input::placeholder {
 }
 
 .error-message {
-    color: #DC143C;
+    color: #e74c3c;
     font-size: 14px;
     margin-top: 8px;
     display: block;
@@ -263,7 +284,7 @@ input::placeholder {
 .btn-primary {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #DC143C 100%);
+    background: linear-gradient(135deg, #2d5e3d 0%, #3a7d52 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -274,15 +295,30 @@ input::placeholder {
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 5px 15px rgba(139, 0, 0, 0.4);
+    box-shadow: 0 5px 15px rgba(58, 125, 82, 0.3);
     position: relative;
     overflow: hidden;
 }
 
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+    left: 100%;
+}
+
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(139, 0, 0, 0.5);
-    background: linear-gradient(135deg, #B22222 0%, #DC143C 50%, #FF4500 100%);
+    box-shadow: 0 8px 20px rgba(58, 125, 82, 0.4);
+    background: linear-gradient(135deg, #3a7d52 0%, #2d5e3d 100%);
 }
 
 .btn-primary:active {
@@ -312,15 +348,30 @@ input::placeholder {
 }
 
 a {
-    color: #B22222;
+    color: #2d5e3d;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s;
+    transition: all 0.3s;
+    position: relative;
+}
+
+a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #e74c3c;
+    transition: width 0.3s;
 }
 
 a:hover {
-    color: #8B0000;
-    text-decoration: underline;
+    color: #3a7d52;
+}
+
+a:hover::after {
+    width: 100%;
 }
 
 .hidden {
@@ -342,15 +393,15 @@ a:hover {
 }
 
 .success {
-    background-color: #FFE4E1;
-    color: #8B0000;
-    border: 1px solid #FFB6C1;
+    background-color: #d4f8e8;
+    color: #2d5e3d;
+    border: 1px solid #a8e6cf;
 }
 
 .error {
-    background-color: #FFE4E1;
-    color: #8B0000;
-    border: 1px solid #FFB6C1;
+    background-color: #fde8e8;
+    color: #e74c3c;
+    border: 1px solid #f5b7b1;
 }
 
 .card::-webkit-scrollbar {
@@ -363,12 +414,12 @@ a:hover {
 }
 
 .card::-webkit-scrollbar-thumb {
-    background: #B22222;
+    background: #2d5e3d;
     border-radius: 10px;
 }
 
 .card::-webkit-scrollbar-thumb:hover {
-    background: #8B0000;
+    background: #1a3c27;
 }
 
 @media (max-width: 480px) {

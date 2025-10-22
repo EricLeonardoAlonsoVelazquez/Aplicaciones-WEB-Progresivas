@@ -92,7 +92,6 @@ const setAuthCookie = (res, token) => {
   });
 };
 
-
 const clearAuthCookie = (res) => {
   res.clearCookie('authToken');
 };

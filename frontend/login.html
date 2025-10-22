@@ -7,14 +7,21 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8B0000"/>
 </head>
 <body>
+    <!-- Contenido limpio - App Shell se maneja desde JS -->
     <div class="background-container">
-        <div class="leaf leaf-1"></div>
-        <div class="leaf leaf-2"></div>
-        <div class="leaf leaf-3"></div>
-        <div class="leaf leaf-4"></div>
-        <div class="leaf leaf-5"></div>
+        <div class="network-node node-1"></div>
+        <div class="network-node node-2"></div>
+        <div class="network-node node-3"></div>
+        <div class="network-node node-4"></div>
+        <div class="network-node node-5"></div>
+        
+        <div class="network-line line-1"></div>
+        <div class="network-line line-2"></div>
+        <div class="network-line line-3"></div>
     </div>
     
     <div class="container">
@@ -26,7 +33,6 @@
             <p class="tagline">Sistema de Monitoreo de Arbolado Urbano</p>
         </div>
 
-        <!-- Login -->
         <div class="login-container card">
             <h2>Iniciar Sesión</h2>
             <form id="loginForm">
@@ -52,7 +58,6 @@
             <p class="switch-form">¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a></p>
         </div>
 
-        <!-- Registro -->
         <div class="register-container card hidden">
             <h2>Crear Cuenta</h2>
             <form id="registerForm">
@@ -92,12 +97,12 @@
             <p class="switch-form">¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión aquí</a></p>
         </div>
 
-        <!-- Mensajes -->
         <div class="message-container hidden" id="messageContainer">
             <p id="messageText"></p>
         </div>
     </div>
 
+    <script src="js/app-shell.js"></script>
     <script src="js/auth.js"></script>
 </body>
 </html>
