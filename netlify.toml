@@ -6,19 +6,57 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Redirecciones para el frontend
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Redirecciones para API (opcionales, ahora usamos las directas)
+# REDIRECCIONES CRÍTICAS - Las rutas API deben ir a la función
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/api/:splat"
   status = 200
 
+# Rutas de páginas también van a la función
 [[redirects]]
-  from = "/backend/*"
-  to = "/.netlify/functions/server/:splat"
+  from = "/login"
+  to = "/.netlify/functions/server/login"
+  status = 200
+
+[[redirects]]
+  from = "/index"
+  to = "/.netlify/functions/server/index"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/server/health"
+  status = 200
+
+# La raíz también va a la función
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/server"
+  status = 200
+
+# Archivos estáticos se sirven directamente
+[[redirects]]
+  from = "/css/*"
+  to = "/css/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/js/*"
+  to = "/js/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/icons/*"
+  to = "/icons/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/img/*"
+  to = "/img/:splat"
+  status = 200
+
+# Fallback para SPA - solo si no se encontró ningún archivo
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
