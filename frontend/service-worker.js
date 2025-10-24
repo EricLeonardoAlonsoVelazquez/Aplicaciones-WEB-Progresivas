@@ -1,6 +1,6 @@
 console.log('🔧 Service Worker cargando...');
 
-const CACHE_NAME = 'arbored-v9';
+const CACHE_NAME = 'arbored-v10';
 const urlsToCache = [
   '/',
   '/login',
@@ -116,4 +116,5 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+
 });
