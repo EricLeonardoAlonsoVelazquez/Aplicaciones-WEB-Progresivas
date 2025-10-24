@@ -1,5 +1,15 @@
-// auth.js - Controlador de autenticación
-const API_BASE_URL = '/api/auth';
+// Configuración de API - CORREGIDA para Render
+const getApiBaseUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return '/api/auth';
+    } else {
+        return '/api/auth';
+    }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
+console.log('📍 Hostname actual:', window.location.hostname);
 
 const authService = {
     async login(email, password) {
@@ -384,4 +394,5 @@ if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
     document.addEventListener('DOMContentLoaded', function() {
         authController.init();
     });
+
 }
