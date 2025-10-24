@@ -36,7 +36,7 @@ const authService = {
                 console.log('✅ Login exitoso, redirigiendo a index...');
                 
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "/index";
                 }, 500);
             } else {
                 console.log('❌ Error en login:', result.message);
@@ -76,7 +76,7 @@ const authService = {
                 console.log('✅ Registro exitoso, redirigiendo a index...');
                 
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "/index";
                 }, 500);
             } else {
                 console.log('❌ Error en registro:', result.message);
@@ -197,7 +197,7 @@ const authController = {
         if (token && user) {
             console.log('🔄 Usuario ya autenticado, redirigiendo a index...');
             setTimeout(() => {
-                window.location.href = "index.html";
+                window.location.href = "index";
             }, 1000);
         }
     },
@@ -394,5 +394,4 @@ if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
     document.addEventListener('DOMContentLoaded', function() {
         authController.init();
     });
-
 }
