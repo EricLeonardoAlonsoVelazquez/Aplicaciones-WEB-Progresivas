@@ -6,20 +6,10 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Redirecciones para tu aplicación
+# REDIRECCIONES CORREGIDAS - sin prefijo /server
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/api/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/login"
-  to = "/.netlify/functions/server/login"
-  status = 200
-
-[[redirects]]
-  from = "/index"
-  to = "/.netlify/functions/server/index"
   status = 200
 
 [[redirects]]
@@ -27,7 +17,12 @@
   to = "/.netlify/functions/server/health"
   status = 200
 
-# Todas las demás rutas van al frontend
+[[redirects]]
+  from = "/test-firebase"
+  to = "/.netlify/functions/server/test-firebase"
+  status = 200
+
+# Frontend
 [[redirects]]
   from = "/*"
   to = "/index.html"
