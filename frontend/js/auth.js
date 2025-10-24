@@ -1,16 +1,10 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? '/api/auth' 
-  : '/.netlify/functions/server/api/auth';
-
-console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
-console.log('📍 Hostname actual:', window.location.hostname);
+// auth.js - Controlador de autenticación
+const API_BASE_URL = '/api/auth';
 
 const authService = {
     async login(email, password) {
         try {
             console.log('🔐 Enviando solicitud de login...', email);
-            console.log('📡 URL de login:', `${API_BASE_URL}/login`);
-            
             const response = await fetch(`${API_BASE_URL}/login`, {
                 method: 'POST',
                 headers: {
@@ -22,34 +16,28 @@ const authService = {
             
             console.log('📨 Respuesta recibida, status:', response.status);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
             const result = await response.json();
             console.log('📊 Respuesta completa:', result);
             
             if (result.success) {
+                // GUARDAR CORRECTAMENTE EL USUARIO
                 this.saveToken(result.token);
                 this.saveUserToLocalStorage(result.user);
-                console.log('✅ Login exitoso, redirigiendo a /index...');
+                console.log('✅ Login exitoso, redirigiendo a index...');
                 
                 setTimeout(() => {
-                    console.log('🔄 Redirigiendo a /index...');
-                    window.location.href = '/index'; 
+                    window.location.href = "index.html";
                 }, 500);
-                
-                return result;
             } else {
                 console.log('❌ Error en login:', result.message);
-                return result;
             }
             
+            return result;
         } catch (error) {
             console.error('Login error:', error);
             return {
                 success: false,
-                message: 'Error de conexión con el servidor: ' + error.message
+                message: 'Error de conexión con el servidor'
             };
         }
     },
@@ -57,8 +45,6 @@ const authService = {
     async register(name, email, password) {
         try {
             console.log('📝 Enviando solicitud de registro...', email);
-            console.log('📡 URL de registro:', `${API_BASE_URL}/register`);
-            
             const response = await fetch(`${API_BASE_URL}/register`, {
                 method: 'POST',
                 headers: {
@@ -70,93 +56,28 @@ const authService = {
             
             console.log('📨 Respuesta recibida, status:', response.status);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
             const result = await response.json();
             console.log('📊 Respuesta completa:', result);
             
             if (result.success) {
+                // GUARDAR CORRECTAMENTE EL USUARIO
                 this.saveToken(result.token);
                 this.saveUserToLocalStorage(result.user);
-                console.log('✅ Registro exitoso, redirigiendo a /index...');
+                console.log('✅ Registro exitoso, redirigiendo a index...');
                 
                 setTimeout(() => {
-                    console.log('🔄 Redirigiendo a /index...');
-                    window.location.href = '/index'; 
+                    window.location.href = "index.html";
                 }, 500);
-                
-                return result;
             } else {
                 console.log('❌ Error en registro:', result.message);
-                return result;
             }
             
+            return result;
         } catch (error) {
             console.error('Register error:', error);
             return {
                 success: false,
-                message: 'Error de conexión con el servidor: ' + error.message
-            };
-        }
-    },
-
-    async verifyToken() {
-        try {
-            console.log('🔍 Verificando token...');
-            const token = localStorage.getItem('authToken');
-            
-            if (!token) {
-                return { success: false, message: 'No token found' };
-            }
-            
-            const response = await fetch(`${API_BASE_URL}/me`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            });
-            
-            console.log('📨 Respuesta de verificación:', response.status);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            return result;
-            
-        } catch (error) {
-            console.error('Token verification error:', error);
-            return {
-                success: false,
-                message: 'Error verifying token: ' + error.message
-            };
-        }
-    },
-
-    async logout() {
-        try {
-            console.log('🚪 Cerrando sesión...');
-            const response = await fetch(`${API_BASE_URL}/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            
-            this.removeToken();
-            console.log('✅ Logout exitoso');
-            
-            return { success: true };
-            
-        } catch (error) {
-            console.error('Logout error:', error);
-            this.removeToken();
-            return {
-                success: false,
-                message: 'Error durante logout: ' + error.message
+                message: 'Error de conexión con el servidor'
             };
         }
     },
@@ -189,14 +110,16 @@ const authService = {
                 return;
             }
 
+            // Asegurarse de que el usuario tenga la estructura correcta
             const userToSave = {
-                id: user.id || user._id || user.uid || Date.now().toString(),
-                name: user.name || user.displayName || 'Usuario',
+                id: user.id || user._id || Date.now().toString(),
+                name: user.name || 'Usuario',
                 email: user.email || '',
                 lastAccess: new Date().toISOString()
             };
 
-            if (!userToSave.email) {
+            // Validar que tenemos datos mínimos
+            if (!userToSave.name || !userToSave.email) {
                 console.error('❌ Datos de usuario incompletos:', userToSave);
                 return;
             }
@@ -204,6 +127,9 @@ const authService = {
             localStorage.setItem('user', JSON.stringify(userToSave));
             console.log('✅ Usuario guardado en localStorage:', userToSave);
             
+            // Verificar que se guardó correctamente
+            const savedUser = localStorage.getItem('user');
+            console.log('🔍 Usuario verificado en localStorage:', savedUser);
         } catch (error) {
             console.error('❌ Error guardando usuario:', error);
         }
@@ -213,7 +139,6 @@ const authService = {
 const authController = {
     init() {
         console.log('🔐 Inicializando controlador de autenticación...');
-        console.log('📍 Entorno:', window.location.hostname);
         
         this.loginForm = document.getElementById('loginForm');
         this.registerForm = document.getElementById('registerForm');
@@ -222,6 +147,7 @@ const authController = {
         
         this.initEventListeners();
         
+        // Verificar si ya está autenticado
         this.checkIfAlreadyAuthenticated();
     },
 
@@ -254,26 +180,15 @@ const authController = {
         }
     },
 
-    async checkIfAlreadyAuthenticated() {
+    checkIfAlreadyAuthenticated() {
         const token = localStorage.getItem('authToken');
         const user = localStorage.getItem('user');
         
         if (token && user) {
-            console.log('🔄 Usuario ya autenticado, verificando token...');
-            
-            // Verificar con el servidor si el token es válido
-            const result = await authService.verifyToken();
-            
-            if (result.success) {
-                console.log('✅ Token válido, redirigiendo a /index...');
-                setTimeout(() => {
-                    console.log('🔄 Redirección automática a /index');
-                    window.location.href = '/index'; 
-                }, 1000);
-            } else {
-                console.log('❌ Token inválido, limpiando datos...');
-                authService.removeToken();
-            }
+            console.log('🔄 Usuario ya autenticado, redirigiendo a index...');
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1000);
         }
     },
 
@@ -298,7 +213,6 @@ const authController = {
                 this.showMessage(result.message || 'Error en el login', 'error');
                 this.setButtonLoading(loginBtn, false, 'Iniciar Sesión');
             }
-            
         } catch (error) {
             console.error('Error:', error);
             this.showMessage('Error de conexión. Intenta nuevamente.', 'error');
@@ -329,7 +243,6 @@ const authController = {
                 this.showMessage(result.message || 'Error en el registro', 'error');
                 this.setButtonLoading(registerBtn, false, 'Registrarse');
             }
-            
         } catch (error) {
             console.error('Error:', error);
             this.showMessage('Error de conexión. Intenta nuevamente.', 'error');
@@ -461,20 +374,14 @@ const authController = {
     }
 };
 
-// Inicialización
-console.log('✅ auth.js cargado - VERSIÓN NETLIFY');
-console.log('📍 API Base URL:', API_BASE_URL);
-
+// Inicializar cuando el App Shell esté listo
 if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
-    console.log('🚀 Inicializando con AppShell...');
     window.AppShell.onAppReady(() => {
-        console.log('🎉 AppShell listo - Inicializando authController');
         authController.init();
     });
 } else {
-    console.log('🔄 Inicializando sin AppShell...');
+    // Fallback si AppShell no está disponible
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('📄 DOM cargado - Inicializando authController');
         authController.init();
     });
 }

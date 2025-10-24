@@ -1,450 +1,187 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? '/api/auth' 
-  : '/.netlify/functions/server/api/auth';
+// app-shell.js - Gestión simplificada del App Shell
+console.log('🔧 Cargando App Shell...');
 
-console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
-console.log('📍 Hostname actual:', window.location.hostname);
+class AppShell {
+    constructor() {
+        this.isInitialized = false;
+        console.log('🏗️ Constructor App Shell llamado');
+        this.init();
+    }
 
-const indexController = {
-    init() {
-        console.log('🚀 Inicializando indexController...');
+    async init() {
+        if (this.isInitialized) return;
         
-        if (!this.verifyAuthentication()) {
-            return;
-        }
+        console.log('🚀 Inicializando App Shell...');
+        this.setupAppShell();
+        await this.registerServiceWorker();
+        this.isInitialized = true;
         
-        if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
-            console.log('✅ AppShell disponible, usando onAppReady');
-            window.AppShell.onAppReady(() => {
-                console.log('🎉 AppReady recibido - Inicializando aplicación');
-                this.initializeApp();
-            });
-        } else {
-            console.log('⚠️ AppShell no disponible, usando inicialización directa');
-            this.initializeAppWithFallback();
-        }
-    },
+        console.log('✅ App Shell inicializado correctamente');
+    }
 
-    verifyAuthentication() {
-        console.log('🔐 Verificando autenticación...');
-        const token = localStorage.getItem('authToken');
-        const user = localStorage.getItem('user');
-        
-        console.log('🔍 Token en localStorage:', !!token);
-        console.log('🔍 Usuario en localStorage:', !!user);
-        
-        if (!token || !user) {
-            console.log('❌ No autenticado, redirigiendo a login...');
-            this.redirectToLogin();
-            return false;
-        }
-        
-        this.verifyTokenWithServer();
-        return true;
-    },
-
-    async verifyTokenWithServer() {
-        try {
-            console.log('🔍 Verificando token con servidor...');
-            const token = localStorage.getItem('authToken');
-            
-            const response = await fetch(`${API_BASE_URL}/me`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            });
-            
-            console.log('📨 Respuesta de verificación:', response.status);
-            
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    console.log('❌ Token inválido o expirado en servidor');
-                    this.handleInvalidToken();
-                    return false;
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('📊 Resultado de verificación:', result);
-            
-            if (result.success) {
-                console.log('✅ Token verificado correctamente con servidor');
-                if (result.user) {
-                    localStorage.setItem('user', JSON.stringify(result.user));
-                }
-                return true;
-            } else {
-                console.log('❌ Token inválido según servidor');
-                this.handleInvalidToken();
-                return false;
-            }
-        } catch (error) {
-            console.error('❌ Error verificando token con servidor:', error);
-            console.log('⚠️ Error de conexión, continuando con verificación local');
-            return this.verifyLocalAuthentication();
-        }
-    },
-
-    verifyLocalAuthentication() {
-        const token = localStorage.getItem('authToken');
-        const user = localStorage.getItem('user');
-        
-        if (!token || !user) {
-            this.handleInvalidToken();
-            return false;
-        }
-        
-        try {
-            const tokenParts = token.split('.');
-            if (tokenParts.length !== 3) {
-                throw new Error('Formato de token inválido');
-            }
-            
-            const payload = JSON.parse(atob(tokenParts[1]));
-            const now = Math.floor(Date.now() / 1000);
-            
-            if (payload.exp && payload.exp < now) {
-                console.log('❌ Token expirado localmente');
-                this.handleInvalidToken();
-                return false;
-            }
-            
-            console.log('✅ Verificación local exitosa');
-            return true;
-        } catch (error) {
-            console.error('❌ Error en verificación local:', error);
-            this.handleInvalidToken();
-            return false;
-        }
-    },
-
-    handleInvalidToken() {
-        console.log('🗑️ Limpiando datos de autenticación inválidos');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        
-        fetch(`${API_BASE_URL}/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        }).catch(err => console.log('⚠️ Error al limpiar cookie del servidor:', err));
-        
-        this.redirectToLogin();
-    },
-
-    redirectToLogin() {
-        console.log('🔄 Redirigiendo a login...');
-        window.location.replace('/login');
-    },
-
-    initializeAppWithFallback() {
-        console.log('🔄 Usando fallback de inicialización');
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('📄 DOMContentLoaded (fallback)');
-                this.initializeApp();
-            });
-        } else {
-            console.log('📄 DOM ya listo (fallback)');
-            this.initializeApp();
-        }
-    },
-
-    initializeApp() {
-        console.log('🏁 Inicializando aplicación index...');
-        
-        if (!this.verifyLocalAuthentication()) {
-            return;
-        }
-        
-        this.initEventListeners();
-        this.initUI();
-        this.initSmoothScroll();
-        this.updateUIWithUserInfo();
-        this.setupScrollHeader();
-        console.log('✅ Aplicación index inicializada completamente');
-    },
-
-    initEventListeners() {
-        console.log('🔗 Configurando event listeners...');
-        
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'logoutBtn' || e.target.id === 'userLogoutBtn' || 
-                e.target.closest('#logoutBtn') || e.target.closest('#userLogoutBtn')) {
-                e.preventDefault();
-                this.handleLogout();
-            }
-        });
-
-        const navLinks = document.querySelectorAll('nav a[href^="#"]');
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = link.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        const heroBtn = document.querySelector('.hero .btn-primary');
-        if (heroBtn) {
-            heroBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const proyectoSection = document.getElementById('proyecto');
-                if (proyectoSection) {
-                    proyectoSection.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        }
-
-        const footerLinks = document.querySelectorAll('.footer-links a[href^="#"]');
-        footerLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = link.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    const headerHeight = document.querySelector('header').offsetHeight;
-                    const targetPosition = targetElement.offsetTop - headerHeight - 20;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        window.addEventListener('beforeunload', () => {
-            console.log('🔒 Cerrando aplicación protegida...');
-        });
-    },
-
-    initUI() {
-        console.log('🎨 Inicializando UI...');
-        this.updateFooterYear();
-        this.initScrollAnimations();
-    },
-
-    updateUIWithUserInfo() {
-        console.log('👤 Actualizando información de usuario...');
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        const loginLink = document.getElementById('userMenuLink');
-        
-        console.log('🔍 Usuario en localStorage:', user);
-        
-        if (user && user.name && loginLink) {
-            console.log('✅ Mostrando información de usuario:', user.name);
-            
-            loginLink.textContent = user.name;
-            loginLink.href = '#';
-            loginLink.style.fontWeight = '500';
-            
-            this.createUserDropdown(loginLink, user);
-        } else if (loginLink) {
-            console.log('ℹ️ No hay usuario, mostrando "Iniciar Sesión"');
-            loginLink.textContent = 'Iniciar Sesión';
-            loginLink.href = '/login';
-            loginLink.style.fontWeight = '400';
-            
-            const existingDropdown = document.querySelector('.user-dropdown');
-            if (existingDropdown) {
-                existingDropdown.remove();
+    async registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.register('/service-worker.js');
+                console.log('✅ Service Worker registrado:', registration.scope);
+                return registration;
+            } catch (error) {
+                console.log('❌ Service Worker falló:', error);
             }
         }
-    },
+        return null;
+    }
 
-    createUserDropdown(loginLink, user) {
-        console.log('📋 Creando dropdown de usuario...');
-        
-        const existingDropdown = document.querySelector('.user-dropdown');
-        if (existingDropdown) {
-            existingDropdown.remove();
-        }
+    setupAppShell() {
+        this.createLoadingScreen();
+        this.handleAppLoad();
+    }
 
-        const dropdownContainer = document.createElement('div');
-        dropdownContainer.className = 'user-dropdown';
-        dropdownContainer.innerHTML = `
-            <div class="user-menu">
-                <span class="user-greeting">Hola, ${user.name}</span>
-                <button id="userLogoutBtn" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
+    createLoadingScreen() {
+        if (document.getElementById('appLoading')) return;
+
+        const loadingHTML = `
+            <div class="app-loading" id="appLoading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Cargando Arbored...</div>
             </div>
         `;
         
-        loginLink.parentNode.appendChild(dropdownContainer);
+        document.body.insertAdjacentHTML('afterbegin', loadingHTML);
+        this.injectCriticalCSS();
+    }
+
+    injectCriticalCSS() {
+        if (document.getElementById('app-shell-css')) return;
+
+        const criticalCSS = `
+            <style id="app-shell-css">
+                .app-loading {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #DC143C 100%);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 9999;
+                    transition: opacity 0.5s ease;
+                }
+                
+                .loading-spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid rgba(255,255,255,0.3);
+                    border-top: 3px solid white;
+                    border-radius: 50%;
+                    animation: appShellSpin 1s linear infinite;
+                    margin-bottom: 15px;
+                }
+                
+                .loading-text {
+                    color: white;
+                    font-family: 'Poppins', sans-serif;
+                    font-size: 16px;
+                    font-weight: 300;
+                }
+                
+                .app-content {
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+                
+                .app-content.loaded {
+                    opacity: 1;
+                }
+                
+                @keyframes appShellSpin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
         
-        const userLogoutBtn = document.getElementById('userLogoutBtn');
-        if (userLogoutBtn) {
-            userLogoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleLogout();
+        document.head.insertAdjacentHTML('beforeend', criticalCSS);
+    }
+
+    handleAppLoad() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.showAppContent();
             });
+        } else {
+            this.showAppContent();
+        }
+    }
+
+    showAppContent() {
+        const appLoading = document.getElementById('appLoading');
+        const mainContent = document.querySelector('main') || document.body;
+        
+        if (mainContent && !mainContent.classList.contains('app-content')) {
+            mainContent.classList.add('app-content');
         }
         
-        loginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            dropdownContainer.classList.toggle('active');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!dropdownContainer.contains(e.target) && e.target !== loginLink) {
-                dropdownContainer.classList.remove('active');
-            }
-        });
-    },
-
-    async handleLogout() {
-        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-            console.log('🚪 Cerrando sesión...');
-            
-            try {
-                const result = await fetch(`${API_BASE_URL}/logout`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                
-                console.log('✅ Sesión cerrada en servidor');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
-                
-            } catch (error) {
-                console.error('Error al cerrar sesión:', error);
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
-            }
-        }
-    },
-
-    initSmoothScroll() {
-        console.log('🔄 Configurando scroll suave...');
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    const headerHeight = document.querySelector('header').offsetHeight;
-                    const targetPosition = targetElement.offsetTop - headerHeight - 20;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-    },
-
-    initScrollAnimations() {
-        console.log('🎭 Configurando animaciones de scroll...');
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.card, .benefit-item, .audience-item').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            observer.observe(el);
-        });
-    },
-
-    setupScrollHeader() {
-        console.log('📏 Configurando header con scroll...');
-        window.addEventListener('scroll', () => {
-            const header = document.querySelector('header');
-            if (window.scrollY > 100) {
-                header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-                header.style.background = 'rgba(255, 255, 255, 0.98)';
+        setTimeout(() => {
+            if (appLoading) {
+                appLoading.style.opacity = '0';
+                setTimeout(() => {
+                    appLoading.remove();
+                    if (mainContent) {
+                        mainContent.classList.add('loaded');
+                    }
+                    this.emitAppReady();
+                }, 500);
             } else {
-                header.style.boxShadow = '0 5px 20px rgba(139, 0, 0, 0.2)';
-                header.style.background = 'rgba(255, 255, 255, 0.95)';
+                this.emitAppReady();
             }
-        });
-    },
+        }, 800);
+    }
 
-    updateFooterYear() {
-        const yearElement = document.getElementById('current-year');
-        if (yearElement) {
-            yearElement.textContent = new Date().getFullYear();
+    emitAppReady() {
+        console.log('🎉 App Shell completamente cargado - emitiendo evento');
+        const event = new CustomEvent('appReady', {
+            detail: { timestamp: new Date() }
+        });
+        window.dispatchEvent(event);
+    }
+
+    onAppReady(callback) {
+        console.log('📞 onAppReady llamado');
+        if (this.isInitialized && document.readyState === 'complete') {
+            console.log('✅ App ya inicializado, ejecutando callback inmediatamente');
+            setTimeout(callback, 100);
+        } else {
+            console.log('⏳ Esperando evento appReady...');
+            window.addEventListener('appReady', callback);
         }
     }
-};
-
-// Inicialización de la aplicación protegida
-console.log('🔧 Iniciando aplicación index protegida...');
-
-function initializeProtectedApp() {
-    console.log('📄 Inicializando aplicación protegida...');
-    
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    console.log('🔍 Estado de autenticación - Token:', !!token, 'Usuario:', !!user);
-    
-    if (!token || !user) {
-        console.log('❌ No autenticado al cargar, redirigiendo a login...');
-        window.location.replace('/login');
-        return;
-    }
-    
-    console.log('✅ Usuario autenticado, inicializando aplicación...');
-    indexController.init();
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeProtectedApp);
-} else {
-    initializeProtectedApp();
+// Inicialización GARANTIZADA del App Shell
+console.log('🔨 Instanciando App Shell...');
+try {
+    const appShell = new AppShell();
+    window.AppShell = appShell;
+    console.log('✅ App Shell asignado a window.AppShell:', !!window.AppShell);
+    console.log('✅ onAppReady disponible:', typeof window.AppShell.onAppReady === 'function');
+} catch (error) {
+    console.error('❌ Error instanciando App Shell:', error);
+    // Fallback garantizado
+    window.AppShell = {
+        onAppReady: (callback) => {
+            console.log('🔄 Usando fallback onAppReady');
+            if (document.readyState === 'complete') {
+                callback();
+            } else {
+                window.addEventListener('load', callback);
+            }
+        }
+    };
 }
 
-// Verificación de seguridad adicional
-setTimeout(() => {
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !user) {
-        console.log('⏰ Timeout de seguridad - Redirigiendo a login');
-        window.location.replace('/login');
-    }
-}, 2000);
-
-window.addEventListener('load', () => {
-    console.log('🛡️ Aplicación cargada - Verificación final');
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !user) {
-        console.log('🚫 Acceso no autorizado detectado después de carga');
-        window.location.replace('/login');
-    }
-});
-
-console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
+console.log('🔍 Estado final - window.AppShell:', window.AppShell);
+console.log('🔍 onAppReady disponible:', typeof window.AppShell.onAppReady === 'function');
