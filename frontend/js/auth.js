@@ -1,9 +1,16 @@
-const API_BASE_URL = '/api/auth';
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? '/api/auth' 
+  : '/.netlify/functions/server/api/auth';
+
+console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
+console.log('📍 Hostname actual:', window.location.hostname);
 
 const authService = {
     async login(email, password) {
         try {
             console.log('🔐 Enviando solicitud de login...', email);
+            console.log('📡 URL de login:', `${API_BASE_URL}/login`);
+            
             const response = await fetch(`${API_BASE_URL}/login`, {
                 method: 'POST',
                 headers: {
@@ -14,6 +21,10 @@ const authService = {
             });
             
             console.log('📨 Respuesta recibida, status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const result = await response.json();
             console.log('📊 Respuesta completa:', result);
@@ -38,7 +49,7 @@ const authService = {
             console.error('Login error:', error);
             return {
                 success: false,
-                message: 'Error de conexión con el servidor'
+                message: 'Error de conexión con el servidor: ' + error.message
             };
         }
     },
@@ -46,6 +57,8 @@ const authService = {
     async register(name, email, password) {
         try {
             console.log('📝 Enviando solicitud de registro...', email);
+            console.log('📡 URL de registro:', `${API_BASE_URL}/register`);
+            
             const response = await fetch(`${API_BASE_URL}/register`, {
                 method: 'POST',
                 headers: {
@@ -56,6 +69,10 @@ const authService = {
             });
             
             console.log('📨 Respuesta recibida, status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const result = await response.json();
             console.log('📊 Respuesta completa:', result);
@@ -80,7 +97,66 @@ const authService = {
             console.error('Register error:', error);
             return {
                 success: false,
-                message: 'Error de conexión con el servidor'
+                message: 'Error de conexión con el servidor: ' + error.message
+            };
+        }
+    },
+
+    async verifyToken() {
+        try {
+            console.log('🔍 Verificando token...');
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                return { success: false, message: 'No token found' };
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+            
+            console.log('📨 Respuesta de verificación:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return result;
+            
+        } catch (error) {
+            console.error('Token verification error:', error);
+            return {
+                success: false,
+                message: 'Error verifying token: ' + error.message
+            };
+        }
+    },
+
+    async logout() {
+        try {
+            console.log('🚪 Cerrando sesión...');
+            const response = await fetch(`${API_BASE_URL}/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            
+            this.removeToken();
+            console.log('✅ Logout exitoso');
+            
+            return { success: true };
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            this.removeToken();
+            return {
+                success: false,
+                message: 'Error durante logout: ' + error.message
             };
         }
     },
@@ -114,13 +190,13 @@ const authService = {
             }
 
             const userToSave = {
-                id: user.id || user._id || Date.now().toString(),
-                name: user.name || 'Usuario',
+                id: user.id || user._id || user.uid || Date.now().toString(),
+                name: user.name || user.displayName || 'Usuario',
                 email: user.email || '',
                 lastAccess: new Date().toISOString()
             };
 
-            if (!userToSave.name || !userToSave.email) {
+            if (!userToSave.email) {
                 console.error('❌ Datos de usuario incompletos:', userToSave);
                 return;
             }
@@ -137,6 +213,7 @@ const authService = {
 const authController = {
     init() {
         console.log('🔐 Inicializando controlador de autenticación...');
+        console.log('📍 Entorno:', window.location.hostname);
         
         this.loginForm = document.getElementById('loginForm');
         this.registerForm = document.getElementById('registerForm');
@@ -177,16 +254,26 @@ const authController = {
         }
     },
 
-    checkIfAlreadyAuthenticated() {
+    async checkIfAlreadyAuthenticated() {
         const token = localStorage.getItem('authToken');
         const user = localStorage.getItem('user');
         
         if (token && user) {
-            console.log('🔄 Usuario ya autenticado, redirigiendo a /index...');
-            setTimeout(() => {
-                console.log('🔄 Redirección automática a /index');
-                window.location.href = '/index'; 
-            }, 1000);
+            console.log('🔄 Usuario ya autenticado, verificando token...');
+            
+            // Verificar con el servidor si el token es válido
+            const result = await authService.verifyToken();
+            
+            if (result.success) {
+                console.log('✅ Token válido, redirigiendo a /index...');
+                setTimeout(() => {
+                    console.log('🔄 Redirección automática a /index');
+                    window.location.href = '/index'; 
+                }, 1000);
+            } else {
+                console.log('❌ Token inválido, limpiando datos...');
+                authService.removeToken();
+            }
         }
     },
 
@@ -374,8 +461,9 @@ const authController = {
     }
 };
 
-console.log('✅ auth.js cargado - VERSIÓN CORREGIDA');
-console.log('📍 Redirecciones configuradas a /index');
+// Inicialización
+console.log('✅ auth.js cargado - VERSIÓN NETLIFY');
+console.log('📍 API Base URL:', API_BASE_URL);
 
 if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
     console.log('🚀 Inicializando con AppShell...');
@@ -390,26 +478,3 @@ if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
         authController.init();
     });
 }
-
-
-console.log('🔍 DEBUG: Verificando redirecciones...');
-
-const originalRedirect = authService.login;
-authService.login = async function(email, password) {
-    console.log('🔍 DEBUG: authService.login llamado');
-    const result = await originalRedirect.call(this, email, password);
-    console.log('🔍 DEBUG: authService.login resultado:', result);
-    console.log('🔍 DEBUG: ¿Se ejecutó la redirección?');
-    return result;
-};
-
-setTimeout(() => {
-    console.log('🔍 DEBUG: Revisando redirecciones activas...');
-    const anchors = document.querySelectorAll('a');
-    anchors.forEach(anchor => {
-        if (anchor.href && anchor.href.includes('index.html')) {
-            console.log('🚨 ENCONTRADO: Enlace a index.html:', anchor);
-            anchor.href = anchor.href.replace('index.html', '/index');
-        }
-    });
-}, 2000);

@@ -1,4 +1,9 @@
-console.log('📄 index.js cargado - VERSIÓN PROTEGIDA');
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? '/api/auth' 
+  : '/.netlify/functions/server/api/auth';
+
+console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
+console.log('📍 Hostname actual:', window.location.hostname);
 
 const indexController = {
     init() {
@@ -43,7 +48,7 @@ const indexController = {
             console.log('🔍 Verificando token con servidor...');
             const token = localStorage.getItem('authToken');
             
-            const response = await fetch('/api/auth/verify', {
+            const response = await fetch(`${API_BASE_URL}/me`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -122,7 +127,7 @@ const indexController = {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         
-        fetch('/api/auth/logout', {
+        fetch(`${API_BASE_URL}/logout`, {
             method: 'POST',
             credentials: 'include'
         }).catch(err => console.log('⚠️ Error al limpiar cookie del servidor:', err));
@@ -301,24 +306,27 @@ const indexController = {
         });
     },
 
-    handleLogout() {
+    async handleLogout() {
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             console.log('🚪 Cerrando sesión...');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
             
-            fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'include'
-            })
-            .then(response => {
+            try {
+                const result = await fetch(`${API_BASE_URL}/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
                 console.log('✅ Sesión cerrada en servidor');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
                 window.location.href = '/login';
-            })
-            .catch(error => {
+                
+            } catch (error) {
                 console.error('Error al cerrar sesión:', error);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
                 window.location.href = '/login';
-            });
+            }
         }
     },
 
@@ -390,6 +398,7 @@ const indexController = {
     }
 };
 
+// Inicialización de la aplicación protegida
 console.log('🔧 Iniciando aplicación index protegida...');
 
 function initializeProtectedApp() {
@@ -416,7 +425,7 @@ if (document.readyState === 'loading') {
     initializeProtectedApp();
 }
 
-
+// Verificación de seguridad adicional
 setTimeout(() => {
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('user');
@@ -438,4 +447,4 @@ window.addEventListener('load', () => {
     }
 });
 
-console.log('✅ index.js protegido cargado completamente');
+console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
