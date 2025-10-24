@@ -1,5 +1,13 @@
-const API_BASE_URL = '/api/auth';
+// Configuración de API - CORREGIDA para Render
+const getApiBaseUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return '/api/auth';
+    } else {
+        return '/api/auth';
+    }
+};
 
+const API_BASE_URL = getApiBaseUrl();
 console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
 console.log('📍 Hostname actual:', window.location.hostname);
 
@@ -445,5 +453,4 @@ window.addEventListener('load', () => {
     }
 });
 
-
-console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
+console.log('✅ index.js cargado completamente - VERSIÓN RENDER');
