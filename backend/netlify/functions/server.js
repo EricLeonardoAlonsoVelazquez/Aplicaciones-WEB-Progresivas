@@ -2,209 +2,379 @@ const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const authRoutes = require('../routes/auth');
 const path = require('path');
-const config = require('../config/config');
-const { extractToken } = require('../middleware/auth');
 
 const app = express();
 
-// Configuración CORS para producción
+// Configuración CORS para Netlify
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir requests sin origin (como mobile apps o server requests)
-    if (!origin) return callback(null, true);
-    
+    // Permitir todos los orígenes en Netlify para testing
+    // Luego puedes restringirlo a tu dominio específico
     const allowedOrigins = [
       'http://localhost',
-      'http://localhost:80', 
-      'http://frontend',
-      'https://arbolred1.netlify.app', // Reemplaza con tu dominio de Netlify
-      'https://arbolred1.netlify.app' // Si tienes deploy previews
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'https://your-site.netlify.app', // Cambia por tu dominio
+      'https://*.netlify.app'
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('.netlify.app')) {
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('.netlify.app')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-app.use(cookieParser()); 
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const verifyAuthentication = async (token) => {
-  if (!token) return { authenticated: false, user: null };
-  
-  try {
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, config.jwt.secret);
-    
-    const userService = require('../services/userService');
-    const user = await userService.findById(decoded.userId);
-    
-    return { authenticated: !!user, user: user ? user.toJSON() : null };
-  } catch (error) {
-    console.log('❌ Error verificando token:', error.message);
-    return { authenticated: false, user: null };
-  }
-};
-
-// Middleware de autenticación (igual que tu código original)
-app.use(async (req, res, next) => {
-  const requestedPath = req.path;
-  
-  console.log('🔍 Ruta solicitada:', requestedPath);
-
-  const publicRoutes = [
-    '/login', 
-    '/health', 
-    '/manifest.json',
-    '/service-worker.js',
-    '/api/auth/login',
-    '/api/auth/register',
-    '/.netlify/functions/server/login', // Ruta completa en Netlify
-    '/.netlify/functions/server/health'
-  ];
-  
-  const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/'];
-  
-  const isPublicRoute = publicRoutes.includes(requestedPath) || 
-                       publicStaticPaths.some(publicPath => requestedPath.startsWith(publicPath)) ||
-                       requestedPath.startsWith('/api/auth/') ||
-                       requestedPath.startsWith('/.netlify/functions/server/api/auth/');
-  
-  if (requestedPath === '/' || requestedPath === '/.netlify/functions/server') {
-    console.log('🏠 Ruta raíz solicitada');
-    const token = extractToken(req);
-    const authResult = await verifyAuthentication(token);
-    
-    if (authResult.authenticated) {
-      console.log('✅ Usuario autenticado, redirigiendo a index');
-      return res.redirect('/.netlify/functions/server/index');
-    } else {
-      console.log('❌ Usuario no autenticado, redirigiendo a login');
-      return res.redirect('/.netlify/functions/server/login');
-    }
-  }
-  
-  if (isPublicRoute) {
-    console.log('🌐 Ruta pública, acceso permitido');
-    
-    if ((requestedPath === '/login' || requestedPath === '/.netlify/functions/server/login') && req.method === 'GET') {
-      const token = extractToken(req);
-      const authResult = await verifyAuthentication(token);
-      if (authResult.authenticated) {
-        console.log('🔄 Usuario ya autenticado, redirigiendo a index');
-        return res.redirect('/.netlify/functions/server/index');
-      }
-    }
-    
-    return next();
-  }
-
-  console.log('🛡️ Ruta requiere autenticación:', requestedPath);
-  const token = extractToken(req);
-  
-  if (!token) {
-    console.log('❌ No autenticado, redirigiendo a login');
-    return res.redirect('/.netlify/functions/server/login');
-  }
-
-  const authResult = await verifyAuthentication(token);
-  if (!authResult.authenticated) {
-    console.log('❌ Token inválido o expirado, redirigiendo a login');
-    res.clearCookie('authToken');
-    return res.redirect('/.netlify/functions/server/login');
-  }
-
-  console.log('✅ Usuario autenticado correctamente:', authResult.user.email);
-  req.user = authResult.user;
+// Middleware para log de requests
+app.use((req, res, next) => {
+  console.log('🌐 Request recibida:', {
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    body: req.body ? '...' : 'empty'
+  });
   next();
 });
 
-// Servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, '../../frontend'), {
-  index: false
-}));
-
-// Rutas (actualizadas para Netlify)
-app.get('/.netlify/functions/server/login', (req, res) => {
-  console.log('🌐 Sirviendo página de login desde Netlify');
-  res.sendFile(path.join(__dirname, '../../frontend', 'login.html'));
-});
-
-app.get('/.netlify/functions/server/index', (req, res) => {
-  console.log('📊 Sirviendo dashboard para usuario:', req.user.email);
-  res.sendFile(path.join(__dirname, '../../frontend', 'index.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.redirect('/.netlify/functions/server/login');
-});
-
-app.get('/index', (req, res) => {
-  res.redirect('/.netlify/functions/server/index');
-});
-
-app.get('/health', (req, res) => {
+// Health check endpoint
+app.get('/.netlify/functions/server/health', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'Servidor funcionando correctamente en Netlify',
+    message: 'Servidor funcionando en Netlify',
     timestamp: new Date().toISOString(),
-    environment: 'netlify'
+    environment: process.env.NODE_ENV || 'production'
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/.netlify/functions/server/api/auth', authRoutes);
+// Test Firebase connection
+app.get('/.netlify/functions/server/test-firebase', async (req, res) => {
+  try {
+    console.log('🔥 Probando conexión Firebase...');
+    
+    // Importar Firebase dentro de la función para evitar errores de carga
+    const firebasePath = path.join(__dirname, '..', 'config', 'firebase');
+    const { db } = require(firebasePath);
+    
+    const testRef = db.collection('_netlify_test');
+    await testRef.doc('connection-test').set({
+      timestamp: new Date(),
+      message: 'Firebase funcionando en Netlify Functions!',
+      environment: 'netlify-production'
+    });
+    
+    console.log('✅ Firebase conectado correctamente');
+    
+    res.json({ 
+      success: true, 
+      message: 'Firebase conectado correctamente',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Error en Firebase:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
+  }
+});
+
+// Simple echo endpoint para testing
+app.post('/.netlify/functions/server/echo', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Echo funcionando',
+    received: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Auth routes
+app.post('/.netlify/functions/server/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('🔐 Intentando login para:', email);
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email y contraseña son requeridos'
+      });
+    }
+    
+    // Importar Firebase auth
+    const firebasePath = path.join(__dirname, '..', 'config', 'firebase');
+    const { admin } = require(firebasePath);
+    const auth = admin.auth();
+    
+    // Aquí deberías tener tu lógica de verificación de contraseña
+    // Por ahora, solo verificamos que el usuario exista en Firebase Auth
+    const user = await auth.getUserByEmail(email);
+    
+    console.log('✅ Usuario encontrado:', user.email);
+    
+    // En una implementación real, verificarías la contraseña aquí
+    // Esto es solo para demostración
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        userId: user.uid, 
+        email: user.email 
+      }, 
+      process.env.JWT_SECRET || 'fallback-secret-for-netlify',
+      { expiresIn: '24h' }
+    );
+    
+    // Configurar cookie segura
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    });
+    
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || ''
+      },
+      token: token
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en login:', error.message);
+    
+    if (error.code === 'auth/user-not-found') {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Error en el servidor durante el login'
+    });
+  }
+});
+
+// Register endpoint
+app.post('/.netlify/functions/server/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, displayName } = req.body;
+    
+    console.log('📝 Intentando registro para:', email);
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email y contraseña son requeridos'
+      });
+    }
+    
+    const firebasePath = path.join(__dirname, '..', 'config', 'firebase');
+    const { admin } = require(firebasePath);
+    const auth = admin.auth();
+    
+    // Crear usuario en Firebase Auth
+    const user = await auth.createUser({
+      email: email,
+      password: password,
+      displayName: displayName || '',
+      emailVerified: false
+    });
+    
+    console.log('✅ Usuario creado:', user.uid);
+    
+    // Crear documento en Firestore
+    const { db } = require(firebasePath);
+    await db.collection('users').doc(user.uid).set({
+      email: user.email,
+      displayName: displayName || '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    
+    // Generar JWT token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        userId: user.uid, 
+        email: user.email 
+      }, 
+      process.env.JWT_SECRET || 'fallback-secret-for-netlify',
+      { expiresIn: '24h' }
+    );
+    
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    
+    res.json({
+      success: true,
+      message: 'Usuario registrado exitosamente',
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || ''
+      },
+      token: token
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en registro:', error.message);
+    
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({
+        success: false,
+        error: 'El email ya está registrado'
+      });
+    }
+    
+    if (error.code === 'auth/weak-password') {
+      return res.status(400).json({
+        success: false,
+        error: 'La contraseña es demasiado débil'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Error en el servidor durante el registro'
+    });
+  }
+});
+
+// Logout endpoint
+app.post('/.netlify/functions/server/api/auth/logout', (req, res) => {
+  res.clearCookie('authToken');
+  res.json({
+    success: true,
+    message: 'Logout exitoso'
+  });
+});
+
+// Get current user profile
+app.get('/.netlify/functions/server/api/auth/me', async (req, res) => {
+  try {
+    const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'No autenticado'
+      });
+    }
+    
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-for-netlify');
+    
+    const firebasePath = path.join(__dirname, '..', 'config', 'firebase');
+    const { db } = require(firebasePath);
+    
+    const userDoc = await db.collection('users').doc(decoded.userId).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        uid: decoded.userId,
+        ...userDoc.data()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo perfil:', error.message);
+    res.status(401).json({
+      success: false,
+      error: 'Token inválido o expirado'
+    });
+  }
+});
+
+// Protected route example
+app.get('/.netlify/functions/server/api/protected', async (req, res) => {
+  try {
+    const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Acceso no autorizado'
+      });
+    }
+    
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-for-netlify');
+    
+    res.json({
+      success: true,
+      message: 'Acceso a ruta protegida exitoso',
+      user: decoded,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      error: 'Token inválido'
+    });
+  }
+});
 
 // Manejo de rutas no encontradas
 app.use('*', (req, res) => {
   console.log('❌ Ruta no encontrada:', req.originalUrl);
-  
-  if (!req.originalUrl.includes('.') || req.originalUrl.endsWith('.html')) {
-    const token = extractToken(req);
-    if (token) {
-      try {
-        const jwt = require('jsonwebtoken');
-        jwt.verify(token, config.jwt.secret);
-        return res.redirect('/.netlify/functions/server/index');
-      } catch (error) {
-        // Token inválido
-      }
-    }
-    return res.redirect('/.netlify/functions/server/login');
-  }
-  
-  res.status(404).json({ 
-    success: false, 
-    message: 'Ruta no encontrada' 
+  res.status(404).json({
+    success: false,
+    error: 'Ruta no encontrada',
+    path: req.originalUrl
   });
 });
 
-// Manejo de errores
+// Manejo de errores global
 app.use((error, req, res, next) => {
   console.error('💥 Error no manejado:', error);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Error interno del servidor' 
+  res.status(500).json({
+    success: false,
+    error: 'Error interno del servidor',
+    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
   });
 });
 
-// Exportar para Netlify Functions
+// Export para Netlify Functions
 module.exports.handler = serverless(app);
 
-// Solo para desarrollo local
+// Para desarrollo local con Netlify Dev
 if (process.env.NETLIFY_DEV) {
   const PORT = process.env.PORT || 8888;
   app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT} (Netlify Dev)`);
-    console.log(`🔑 Login: http://localhost:${PORT}/login`);
-    console.log(`📊 Dashboard: http://localhost:${PORT}/index`);
+    console.log(`❤️  Health: http://localhost:${PORT}/.netlify/functions/server/health`);
+    console.log(`🔥 Firebase Test: http://localhost:${PORT}/.netlify/functions/server/test-firebase`);
   });
-
 }
