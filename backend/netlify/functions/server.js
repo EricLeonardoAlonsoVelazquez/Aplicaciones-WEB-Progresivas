@@ -58,7 +58,7 @@ const users = [
   {
     id: '1',
     email: 'admin@example.com',
-    password: '123456', // En producción esto debería estar hasheado
+    password: '12345678', // En producción esto debería estar hasheado
     name: 'Administrador',
     displayName: 'Admin'
   }
@@ -98,7 +98,7 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         name: user.name
       }, 
-      process.env.JWT_SECRET || 'netlify-jwt-secret-key-2024',
+      process.env.JWT_SECRET || 'bdadbf29ff462ca7e0844818d628d547f019ba1590a87ddf167e4e053802815c2e19f982f68c07faaa902eda08dc301b4e6e57bfdf30f3b9d672c804d95d082e',
       { expiresIn: '24h' }
     );
     
