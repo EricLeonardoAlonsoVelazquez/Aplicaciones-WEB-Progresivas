@@ -12,13 +12,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'production';
 
-// CORS para producción - ACTUALIZA ESTOS DOMINIOS
+// CORS para producción
 const allowedOrigins = [
   'http://localhost',
   'http://localhost:80',
   'http://frontend',
-  'https://tu-app-netlify.netlify.app', // Tu dominio de Netlify
-  'https://aplicaciones-web-progresivas.onrender.com' // Tu dominio de Render
+  'https://aplicaciones-web-progresivas.onrender.com'
 ];
 
 app.use(cors({
@@ -58,55 +57,56 @@ const verifyAuthentication = async (token) => {
   }
 };
 
+// Middleware de autenticación CORREGIDO
 app.use(async (req, res, next) => {
   const requestedPath = req.path;
   
   console.log('🔍 Ruta solicitada:', requestedPath);
 
+  // Rutas públicas - EXPANDIDA
   const publicRoutes = [
+    '/',
     '/login', 
     '/health', 
     '/manifest.json',
     '/service-worker.js',
     '/api/auth/login',
-    '/api/auth/register'
+    '/api/auth/register',
+    '/api/auth/logout',
+    '/favicon.ico'
   ];
   
-  const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/'];
+  const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/', '/fonts/'];
   
   const isPublicRoute = publicRoutes.includes(requestedPath) || 
                        publicStaticPaths.some(publicPath => requestedPath.startsWith(publicPath)) ||
                        requestedPath.startsWith('/api/auth/');
   
-  if (requestedPath === '/') {
-    console.log('🏠 Ruta raíz solicitada');
-    const token = extractToken(req);
-    const authResult = await verifyAuthentication(token);
-    
-    if (authResult.authenticated) {
-      console.log('✅ Usuario autenticado, redirigiendo a index');
-      return res.redirect('/index');
-    } else {
-      console.log('❌ Usuario no autenticado, redirigiendo a login');
-      return res.redirect('/login');
-    }
-  }
-  
+  // SIEMPRE permitir acceso a rutas públicas
   if (isPublicRoute) {
-    console.log('🌐 Ruta pública, acceso permitido');
+    console.log('🌐 Ruta pública, acceso permitido:', requestedPath);
     
-    if (requestedPath === '/login' && req.method === 'GET') {
+    // Para la ruta raíz y login, manejar redirecciones
+    if (requestedPath === '/' || requestedPath === '/login') {
       const token = extractToken(req);
       const authResult = await verifyAuthentication(token);
-      if (authResult.authenticated) {
+      
+      if (authResult.authenticated && requestedPath === '/login') {
         console.log('🔄 Usuario ya autenticado, redirigiendo a index');
         return res.redirect('/index');
+      } else if (authResult.authenticated && requestedPath === '/') {
+        console.log('🏠 Usuario autenticado en raíz, redirigiendo a index');
+        return res.redirect('/index');
       }
+      
+      // Si no está autenticado, servir la página normalmente
+      return next();
     }
     
     return next();
   }
 
+  // Solo las rutas protegidas requieren autenticación
   console.log('🛡️ Ruta requiere autenticación:', requestedPath);
   const token = extractToken(req);
   
@@ -127,26 +127,26 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// SERVIR ARCHIVOS ESTÁTICOS - RUTA ACTUALIZADA PARA DOCKER
-app.use(express.static(path.join(__dirname, 'frontend'), {
-  index: false
-}));
+// Servir archivos estáticos SIN redirecciones
+app.use(express.static(path.join(__dirname, 'frontend')));
 
-app.get('/login', (req, res) => {
-  console.log('🌐 Sirviendo página de login');
+// Rutas específicas del frontend - SIMPLIFICADAS
+app.get(['/', '/login'], (req, res) => {
+  console.log('🌐 Sirviendo página de login/raíz');
   res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
 });
 
 app.get('/index', (req, res) => {
-  console.log('📊 Sirviendo dashboard para usuario:', req.user?.email);
+  console.log('📊 Sirviendo dashboard para usuario:', req.user?.email || 'No user');
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
 app.get('/index.html', (req, res) => {
-  console.log('📊 Sirviendo dashboard via index.html para usuario:', req.user?.email);
+  console.log('📊 Sirviendo dashboard via index.html');
   res.redirect('/index');
 });
 
+// Health check mejorado
 app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
@@ -157,31 +157,42 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Rutas de API
 app.use('/api/auth', authRoutes);
 
+// Manejo de rutas no encontradas - CORREGIDO
 app.use('*', (req, res) => {
   console.log('❌ Ruta no encontrada:', req.originalUrl);
   
-  if (!req.originalUrl.includes('.') || req.originalUrl.endsWith('.html')) {
+  // Solo redirigir para rutas que parecen páginas (no archivos)
+  if (!req.originalUrl.includes('.') || 
+      req.originalUrl.endsWith('.html') || 
+      req.originalUrl === '/') {
+    
     const token = extractToken(req);
     if (token) {
       try {
         const jwt = require('jsonwebtoken');
         jwt.verify(token, config.jwt.secret);
+        console.log('🔄 Redirigiendo a index desde 404');
         return res.redirect('/index');
       } catch (error) {
+        console.log('❌ Token inválido en 404, redirigiendo a login');
         // Token inválido, redirigir a login
       }
     }
+    console.log('🔄 Redirigiendo a login desde 404');
     return res.redirect('/login');
   }
   
+  // Para archivos u otras rutas, devolver 404
   res.status(404).json({ 
     success: false, 
     message: 'Ruta no encontrada' 
   });
 });
 
+// Manejo de errores
 app.use((error, req, res, next) => {
   console.error('💥 Error no manejado:', error);
   res.status(500).json({ 
@@ -198,5 +209,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔑 Login: https://aplicaciones-web-progresivas.onrender.com/login`);
   console.log(`📊 Dashboard: https://aplicaciones-web-progresivas.onrender.com/index`);
   console.log(`❤️  Health check: https://aplicaciones-web-progresivas.onrender.com/health`);
-  console.log('🛡️  PROTECCIÓN COMPLETA ACTIVADA');
+  console.log('🛡️  PROTECCIÓN COMPLETA ACTIVADA - SIN BUCLE');
 });
