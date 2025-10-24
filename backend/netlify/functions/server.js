@@ -15,7 +15,7 @@ app.use(cors({
       'http://localhost',
       'http://localhost:3000',
       'http://localhost:8080',
-      'https://your-site.netlify.app', // Cambia por tu dominio
+      'https://arbolred1.netlify.app', // Cambia por tu dominio
       'https://*.netlify.app'
     ];
     
@@ -378,3 +378,4 @@ if (process.env.NETLIFY_DEV) {
     console.log(`🔥 Firebase Test: http://localhost:${PORT}/.netlify/functions/server/test-firebase`);
   });
 }
+
