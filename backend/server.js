@@ -57,7 +57,7 @@ const verifyAuthentication = async (token) => {
   }
 };
 
-// Middleware de autenticación CORREGIDO
+// Middleware de autenticación CORREGIDO - SIN BUCLE
 app.use(async (req, res, next) => {
   const requestedPath = req.path;
   
@@ -73,7 +73,9 @@ app.use(async (req, res, next) => {
     '/api/auth/login',
     '/api/auth/register',
     '/api/auth/logout',
-    '/favicon.ico'
+    '/api/auth/me',
+    '/favicon.ico',
+    '/clear-auth' // Ruta temporal para limpiar autenticación
   ];
   
   const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/', '/fonts/'];
@@ -81,28 +83,10 @@ app.use(async (req, res, next) => {
   const isPublicRoute = publicRoutes.includes(requestedPath) || 
                        publicStaticPaths.some(publicPath => requestedPath.startsWith(publicPath)) ||
                        requestedPath.startsWith('/api/auth/');
-  
-  // SIEMPRE permitir acceso a rutas públicas
+
+  // SIEMPRE permitir acceso a rutas públicas SIN redirección automática
   if (isPublicRoute) {
     console.log('🌐 Ruta pública, acceso permitido:', requestedPath);
-    
-    // Para la ruta raíz y login, manejar redirecciones
-    if (requestedPath === '/' || requestedPath === '/login') {
-      const token = extractToken(req);
-      const authResult = await verifyAuthentication(token);
-      
-      if (authResult.authenticated && requestedPath === '/login') {
-        console.log('🔄 Usuario ya autenticado, redirigiendo a index');
-        return res.redirect('/index');
-      } else if (authResult.authenticated && requestedPath === '/') {
-        console.log('🏠 Usuario autenticado en raíz, redirigiendo a index');
-        return res.redirect('/index');
-      }
-      
-      // Si no está autenticado, servir la página normalmente
-      return next();
-    }
-    
     return next();
   }
 
@@ -127,10 +111,10 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Servir archivos estáticos SIN redirecciones
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Rutas específicas del frontend - SIMPLIFICADAS
+// Rutas específicas del frontend - SIN redirección automática
 app.get(['/', '/login'], (req, res) => {
   console.log('🌐 Sirviendo página de login/raíz');
   res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
@@ -155,6 +139,35 @@ app.get('/health', (req, res) => {
     environment: NODE_ENV,
     port: PORT
   });
+});
+
+// Ruta temporal para limpiar autenticación (ELIMINAR después de usar)
+app.get('/clear-auth', (req, res) => {
+  console.log('🧹 Limpiando autenticación...');
+  res.clearCookie('authToken');
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Limpieza de Autenticación</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .success { color: green; }
+        </style>
+    </head>
+    <body>
+        <h1 class="success">✅ Autenticación limpiada</h1>
+        <p>Cookies y localStorage han sido limpiados.</p>
+        <p>Redirigiendo a login...</p>
+        <script>
+            localStorage.clear();
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        </script>
+    </body>
+    </html>
+  `);
 });
 
 // Rutas de API
@@ -209,5 +222,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔑 Login: https://aplicaciones-web-progresivas.onrender.com/login`);
   console.log(`📊 Dashboard: https://aplicaciones-web-progresivas.onrender.com/index`);
   console.log(`❤️  Health check: https://aplicaciones-web-progresivas.onrender.com/health`);
-  console.log('🛡️  PROTECCIÓN COMPLETA ACTIVADA - SIN BUCLE');
+  console.log(`🧹 Limpiar auth: https://aplicaciones-web-progresivas.onrender.com/clear-auth`);
+  console.log('🛡️  PROTECCIÓN ACTIVADA - SIN BUCLE');
 });
