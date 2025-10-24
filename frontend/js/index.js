@@ -39,60 +39,63 @@ const indexController = {
         console.log('🔍 Token en localStorage:', !!token);
         console.log('🔍 Usuario en localStorage:', !!user);
         
+        // Si estamos en /index pero no hay token, verificar con servidor
+        if (!token && window.location.pathname === '/index') {
+            console.log('🔄 Verificando si hay sesión en el servidor...');
+            return this.verifyServerSession();
+        }
+        
         if (!token || !user) {
             console.log('❌ No autenticado, redirigiendo a login...');
             this.redirectToLogin();
             return false;
         }
         
-        this.verifyTokenWithServer();
         return true;
     },
 
-    async verifyTokenWithServer() {
+    async verifyServerSession() {
         try {
-            console.log('🔍 Verificando token con servidor...');
-            const token = localStorage.getItem('authToken');
-            
+            console.log('🔍 Verificando sesión en servidor...');
             const response = await fetch(`${API_BASE_URL}/me`, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
                 credentials: 'include'
             });
             
-            console.log('📨 Respuesta de verificación:', response.status);
+            console.log('📨 Respuesta de verificación servidor:', response.status);
             
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    console.log('❌ Token inválido o expirado en servidor');
-                    this.handleInvalidToken();
-                    return false;
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.user) {
+                    console.log('✅ Sesión encontrada en servidor, sincronizando...');
+                    // El servidor tiene una sesión válida, sincronizar
+                    this.syncWithServerSession(result);
+                    return true;
                 }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('📊 Resultado de verificación:', result);
-            
-            if (result.success) {
-                console.log('✅ Token verificado correctamente con servidor');
-                if (result.user) {
-                    localStorage.setItem('user', JSON.stringify(result.user));
-                }
-                return true;
-            } else {
-                console.log('❌ Token inválido según servidor');
-                this.handleInvalidToken();
-                return false;
             }
         } catch (error) {
-            console.error('❌ Error verificando token con servidor:', error);
-            console.log('⚠️ Error de conexión, continuando con verificación local');
-            return this.verifyLocalAuthentication();
+            console.error('❌ Error verificando sesión servidor:', error);
         }
+        
+        // No hay sesión válida en el servidor
+        console.log('❌ No hay sesión válida en servidor');
+        this.redirectToLogin();
+        return false;
+    },
+
+    syncWithServerSession(serverData) {
+        console.log('🔄 Sincronizando con sesión del servidor...');
+        // Guardar datos en localStorage para consistencia
+        if (serverData.user) {
+            localStorage.setItem('user', JSON.stringify(serverData.user));
+        }
+        if (serverData.token) {
+            localStorage.setItem('authToken', serverData.token);
+        } else {
+            // Si no hay token en la respuesta, crear uno simbólico
+            localStorage.setItem('authToken', 'session-active');
+        }
+        console.log('✅ Sincronización completada');
     },
 
     verifyLocalAuthentication() {
@@ -102,6 +105,12 @@ const indexController = {
         if (!token || !user) {
             this.handleInvalidToken();
             return false;
+        }
+        
+        // Si el token es simbólico (de sincronización), considerar válido
+        if (token === 'session-active') {
+            console.log('✅ Sesión activa (sincronizada con servidor)');
+            return true;
         }
         
         try {
@@ -414,15 +423,27 @@ function initializeProtectedApp() {
     const user = localStorage.getItem('user');
     
     console.log('🔍 Estado de autenticación - Token:', !!token, 'Usuario:', !!user);
+    console.log('📍 Ruta actual:', window.location.pathname);
     
-    if (!token || !user) {
-        console.log('❌ No autenticado al cargar, redirigiendo a login...');
-        window.location.replace('/login');
+    // Si estamos en login pero tenemos token, redirigir a index
+    if ((token && user) && window.location.pathname === '/login') {
+        console.log('✅ Usuario autenticado en login, redirigiendo a index...');
+        window.location.replace('/index');
         return;
     }
     
-    console.log('✅ Usuario autenticado, inicializando aplicación...');
-    indexController.init();
+    // Si estamos en index pero no tenemos token, verificar autenticación
+    if ((!token || !user) && window.location.pathname === '/index') {
+        console.log('❌ No autenticado en index, verificando...');
+        indexController.verifyAuthentication();
+        return;
+    }
+    
+    // Solo inicializar si estamos autenticados y en la ruta correcta
+    if (token && user && window.location.pathname === '/index') {
+        console.log('✅ Usuario autenticado, inicializando aplicación...');
+        indexController.init();
+    }
 }
 
 if (document.readyState === 'loading') {
@@ -436,21 +457,21 @@ setTimeout(() => {
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('user');
     
-    if (!token || !user) {
+    if ((!token || !user) && window.location.pathname === '/index') {
         console.log('⏰ Timeout de seguridad - Redirigiendo a login');
         window.location.replace('/login');
     }
-}, 2000);
+}, 3000);
 
 window.addEventListener('load', () => {
     console.log('🛡️ Aplicación cargada - Verificación final');
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('user');
     
-    if (!token || !user) {
+    if ((!token || !user) && window.location.pathname === '/index') {
         console.log('🚫 Acceso no autorizado detectado después de carga');
         window.location.replace('/login');
     }
 });
 
-console.log('✅ index.js cargado completamente - VERSIÓN RENDER');
+console.log('✅ index.js cargado completamente - VERSIÓN CORREGIDA SIN BUCLE');
