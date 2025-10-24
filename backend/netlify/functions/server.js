@@ -19,8 +19,8 @@ app.use(cors({
       'http://localhost',
       'http://localhost:80', 
       'http://frontend',
-      'https://tu-sitio.netlify.app', // Reemplaza con tu dominio de Netlify
-      'https://tu-sitio-prueba.netlify.app' // Si tienes deploy previews
+      'https://arbolred1.netlify.app', // Reemplaza con tu dominio de Netlify
+      'https://arbolred1.netlify.app' // Si tienes deploy previews
     ];
     
     if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('.netlify.app')) {
@@ -206,4 +206,5 @@ if (process.env.NETLIFY_DEV) {
     console.log(`🔑 Login: http://localhost:${PORT}/login`);
     console.log(`📊 Dashboard: http://localhost:${PORT}/index`);
   });
+
 }
