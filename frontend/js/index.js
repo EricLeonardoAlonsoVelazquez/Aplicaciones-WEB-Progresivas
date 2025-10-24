@@ -1,6 +1,4 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? '/api/auth' 
-  : '/.netlify/functions/server/api/auth';
+const API_BASE_URL = '/api/auth';
 
 console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
 console.log('📍 Hostname actual:', window.location.hostname);
@@ -446,5 +444,6 @@ window.addEventListener('load', () => {
         window.location.replace('/login');
     }
 });
+
 
 console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
