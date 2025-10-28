@@ -1,165 +1,23 @@
-// Configuración de API - CORREGIDA para Render
-const getApiBaseUrl = () => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return '/api/auth';
-    } else {
-        return '/api/auth';
-    }
-};
+const API_BASE_URL = '/api/auth';
 
-const API_BASE_URL = getApiBaseUrl();
-console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
-console.log('📍 Hostname actual:', window.location.hostname);
-
-const authService = {
-    async login(email, password) {
-        try {
-            console.log('🔐 Enviando solicitud de login...', email);
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include'
-            });
-            
-            console.log('📨 Respuesta recibida, status:', response.status);
-            
-            const result = await response.json();
-            console.log('📊 Respuesta completa:', result);
-            
-            if (result.success) {
-                // GUARDAR CORRECTAMENTE EL USUARIO
-                this.saveToken(result.token);
-                this.saveUserToLocalStorage(result.user);
-                console.log('✅ Login exitoso, redirigiendo a index...');
-                
-                setTimeout(() => {
-                    window.location.href = "/index";
-                }, 500);
-            } else {
-                console.log('❌ Error en login:', result.message);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('Login error:', error);
-            return {
-                success: false,
-                message: 'Error de conexión con el servidor'
-            };
-        }
-    },
-
-    async register(name, email, password) {
-        try {
-            console.log('📝 Enviando solicitud de registro...', email);
-            const response = await fetch(`${API_BASE_URL}/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, email, password }),
-                credentials: 'include'
-            });
-            
-            console.log('📨 Respuesta recibida, status:', response.status);
-            
-            const result = await response.json();
-            console.log('📊 Respuesta completa:', result);
-            
-            if (result.success) {
-                // GUARDAR CORRECTAMENTE EL USUARIO
-                this.saveToken(result.token);
-                this.saveUserToLocalStorage(result.user);
-                console.log('✅ Registro exitoso, redirigiendo a index...');
-                
-                setTimeout(() => {
-                    window.location.href = "/index";
-                }, 500);
-            } else {
-                console.log('❌ Error en registro:', result.message);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('Register error:', error);
-            return {
-                success: false,
-                message: 'Error de conexión con el servidor'
-            };
-        }
-    },
-
-    saveToken(token) {
-        try {
-            localStorage.setItem('authToken', token);
-            console.log('✅ Token guardado en localStorage');
-        } catch (error) {
-            console.error('Error saving token:', error);
-        }
-    },
-
-    removeToken() {
-        try {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            console.log('🗑️ Token y usuario removidos de localStorage');
-        } catch (error) {
-            console.error('Error removing token:', error);
-        }
-    },
-
-    saveUserToLocalStorage(user) {
-        try {
-            console.log('💾 Guardando usuario en localStorage:', user);
-            
-            if (!user) {
-                console.error('❌ Usuario es null o undefined');
-                return;
-            }
-
-            // Asegurarse de que el usuario tenga la estructura correcta
-            const userToSave = {
-                id: user.id || user._id || Date.now().toString(),
-                name: user.name || 'Usuario',
-                email: user.email || '',
-                lastAccess: new Date().toISOString()
-            };
-
-            // Validar que tenemos datos mínimos
-            if (!userToSave.name || !userToSave.email) {
-                console.error('❌ Datos de usuario incompletos:', userToSave);
-                return;
-            }
-
-            localStorage.setItem('user', JSON.stringify(userToSave));
-            console.log('✅ Usuario guardado en localStorage:', userToSave);
-            
-            // Verificar que se guardó correctamente
-            const savedUser = localStorage.getItem('user');
-            console.log('🔍 Usuario verificado en localStorage:', savedUser);
-        } catch (error) {
-            console.error('❌ Error guardando usuario:', error);
-        }
-    }
-};
-
-const authController = {
-    init() {
-        console.log('🔐 Inicializando controlador de autenticación...');
-        
+class AuthController {
+    constructor() {
         this.loginForm = document.getElementById('loginForm');
         this.registerForm = document.getElementById('registerForm');
         this.messageContainer = document.getElementById('messageContainer');
         this.messageText = document.getElementById('messageText');
+        this.init();
+    }
+
+    init() {
+        console.log('🔐 Inicializando controlador de autenticación...');
         
-        this.initEventListeners();
-        
-        // Verificar si ya está autenticado
+        // Verificar primero si ya está autenticado (sincronizado)
         this.checkIfAlreadyAuthenticated();
-    },
+        
+        // Luego inicializar event listeners
+        this.initEventListeners();
+    }
 
     initEventListeners() {
         if (this.loginForm) {
@@ -188,19 +46,104 @@ const authController = {
                 this.hideMessage();
             });
         }
-    },
+    }
 
-    checkIfAlreadyAuthenticated() {
+    async checkIfAlreadyAuthenticated() {
+        console.log('🔍 Verificando autenticación previa...');
+        
+        // Verificar tanto localStorage como servidor
         const token = localStorage.getItem('authToken');
         const user = localStorage.getItem('user');
         
+        console.log('📊 Estado LOCAL - Token:', !!token, 'Usuario:', !!user);
+        
         if (token && user) {
-            console.log('🔄 Usuario ya autenticado, redirigiendo a index...');
-            setTimeout(() => {
-                window.location.href = "index";
-            }, 1000);
+            console.log('🔄 Credenciales locales encontradas, verificando con servidor...');
+            const isValid = await this.verifyTokenWithServer(token);
+            if (isValid) {
+                console.log('✅ Token válido, redirigiendo a index...');
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 500);
+                return;
+            }
         }
-    },
+        
+        // Si no hay credenciales locales o son inválidas, verificar con servidor
+        console.log('🔄 Verificando autenticación con servidor...');
+        const serverAuth = await this.verifyServerAuthentication();
+        if (serverAuth) {
+            console.log('✅ Servidor reporta autenticado, redirigiendo a index...');
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 500);
+        }
+    }
+
+    async verifyServerAuthentication() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/verify`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.user && result.token) {
+                    console.log('✅ Servidor reporta usuario autenticado');
+                    this.syncAuthData(result.token, result.user);
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('Error verificando autenticación con servidor:', error);
+            return false;
+        }
+    }
+
+    async verifyTokenWithServer(token) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/verify`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+            
+            return response.ok;
+        } catch (error) {
+            console.error('Error verificando token:', error);
+            return false;
+        }
+    }
+
+    syncAuthData(token, user) {
+        try {
+            console.log('🔄 Sincronizando datos de autenticación...');
+            
+            if (token) {
+                localStorage.setItem('authToken', token);
+                console.log('✅ Token guardado en localStorage');
+            }
+            
+            if (user) {
+                const userToSave = {
+                    id: user.id || user._id,
+                    name: user.name || 'Usuario',
+                    email: user.email || '',
+                    lastAccess: new Date().toISOString()
+                };
+                
+                localStorage.setItem('user', JSON.stringify(userToSave));
+                console.log('✅ Usuario guardado en localStorage:', userToSave);
+            }
+        } catch (error) {
+            console.error('❌ Error sincronizando datos:', error);
+        }
+    }
 
     async handleLogin(e) {
         e.preventDefault();
@@ -217,9 +160,14 @@ const authController = {
         this.setButtonLoading(loginBtn, true, 'Iniciando sesión...');
         
         try {
-            const result = await authService.login(email, password);
+            const result = await this.login(email, password);
             
-            if (!result.success) {
+            if (result.success) {
+                this.showMessage('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
+            } else {
                 this.showMessage(result.message || 'Error en el login', 'error');
                 this.setButtonLoading(loginBtn, false, 'Iniciar Sesión');
             }
@@ -228,7 +176,7 @@ const authController = {
             this.showMessage('Error de conexión. Intenta nuevamente.', 'error');
             this.setButtonLoading(loginBtn, false, 'Iniciar Sesión');
         }
-    },
+    }
 
     async handleRegister(e) {
         e.preventDefault();
@@ -247,9 +195,14 @@ const authController = {
         this.setButtonLoading(registerBtn, true, 'Registrando...');
         
         try {
-            const result = await authService.register(name, email, password);
+            const result = await this.register(name, email, password);
             
-            if (!result.success) {
+            if (result.success) {
+                this.showMessage('¡Registro exitoso! Redirigiendo...', 'success');
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
+            } else {
                 this.showMessage(result.message || 'Error en el registro', 'error');
                 this.setButtonLoading(registerBtn, false, 'Registrarse');
             }
@@ -258,8 +211,73 @@ const authController = {
             this.showMessage('Error de conexión. Intenta nuevamente.', 'error');
             this.setButtonLoading(registerBtn, false, 'Registrarse');
         }
-    },
+    }
 
+    async login(email, password) {
+        try {
+            console.log('🔐 Enviando solicitud de login...', email);
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include'
+            });
+            
+            console.log('📨 Respuesta recibida, status:', response.status);
+            
+            const result = await response.json();
+            console.log('📊 Respuesta completa:', result);
+            
+            if (result.success) {
+                // Sincronizar datos con localStorage
+                this.syncAuthData(result.token, result.user);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Login error:', error);
+            return {
+                success: false,
+                message: 'Error de conexión con el servidor'
+            };
+        }
+    }
+
+    async register(name, email, password) {
+        try {
+            console.log('📝 Enviando solicitud de registro...', email);
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, email, password }),
+                credentials: 'include'
+            });
+            
+            console.log('📨 Respuesta recibida, status:', response.status);
+            
+            const result = await response.json();
+            console.log('📊 Respuesta completa:', result);
+            
+            if (result.success) {
+                // Sincronizar datos con localStorage
+                this.syncAuthData(result.token, result.user);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Register error:', error);
+            return {
+                success: false,
+                message: 'Error de conexión con el servidor'
+            };
+        }
+    }
+
+    // ... (mantener los métodos de validación y UI existentes)
     validateLoginForm(email, password) {
         let isValid = true;
         
@@ -278,7 +296,7 @@ const authController = {
         }
         
         return isValid;
-    },
+    }
 
     validateRegisterForm(name, email, password, confirmPassword) {
         let isValid = true;
@@ -312,26 +330,26 @@ const authController = {
         }
         
         return isValid;
-    },
+    }
 
     validateEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
-    },
+    }
     
     showError(elementId, message) {
         const errorElement = document.getElementById(elementId);
         if (errorElement) {
             errorElement.textContent = message;
         }
-    },
+    }
     
     hideError(elementId) {
         const errorElement = document.getElementById(elementId);
         if (errorElement) {
             errorElement.textContent = '';
         }
-    },
+    }
     
     showMessage(message, type) {
         if (this.messageText && this.messageContainer) {
@@ -340,13 +358,13 @@ const authController = {
             this.messageContainer.classList.add(type);
             this.messageContainer.classList.remove('hidden');
         }
-    },
+    }
     
     hideMessage() {
         if (this.messageContainer) {
             this.messageContainer.classList.add('hidden');
         }
-    },
+    }
 
     setButtonLoading(button, loading, text) {
         if (button) {
@@ -363,7 +381,7 @@ const authController = {
                 btnIcon.style.display = loading ? 'none' : 'inline-block';
             }
         }
-    },
+    }
 
     switchToLogin() {
         const loginContainer = document.querySelector('.login-container');
@@ -372,7 +390,7 @@ const authController = {
             registerContainer.classList.add('hidden');
             loginContainer.classList.remove('hidden');
         }
-    },
+    }
 
     switchToRegister() {
         const loginContainer = document.querySelector('.login-container');
@@ -382,16 +400,23 @@ const authController = {
             registerContainer.classList.remove('hidden');
         }
     }
-};
+}
 
-// Inicializar cuando el App Shell esté listo
+// Inicialización mejorada
+console.log('🔧 Inicializando sistema de autenticación...');
+
 if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
     window.AppShell.onAppReady(() => {
-        authController.init();
+        console.log('✅ AppShell listo, inicializando auth...');
+        new AuthController();
     });
 } else {
-    // Fallback si AppShell no está disponible
-    document.addEventListener('DOMContentLoaded', function() {
-        authController.init();
-    });
+    console.log('⚠️ AppShell no disponible, usando inicialización directa');
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            new AuthController();
+        });
+    } else {
+        new AuthController();
+    }
 }
