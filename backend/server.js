@@ -8,37 +8,19 @@ const { extractToken } = require('./middleware/auth');
 
 const app = express();
 
-// Configuración para producción
-const PORT = process.env.PORT || 3001;
-const NODE_ENV = process.env.NODE_ENV || 'production';
-
-// CORS para producción
-const allowedOrigins = [
-  'http://localhost',
-  'http://localhost:80',
-  'http://frontend',
-  'https://aplicaciones-web-progresivas.onrender.com'
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      console.log('❌ CORS bloqueado para origen:', origin);
-      return callback(new Error(msg), false);
-    }
-    console.log('✅ CORS permitido para origen:', origin);
-    return callback(null, true);
-  },
+  origin: ['http://localhost', 'http://localhost:80', 'http://frontend'],
   credentials: true
 }));
-
 app.use(cookieParser()); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 🔥 CORRECCIÓN: Servir TODOS los archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// 🔥 CORRECCIÓN ESPECÍFICA para screenshots (si están en frontend/screenshots/)
+app.use('/screenshots', express.static(path.join(__dirname, '../frontend/screenshots')));
 
 const verifyAuthentication = async (token) => {
   if (!token) return { authenticated: false, user: null };
@@ -57,40 +39,56 @@ const verifyAuthentication = async (token) => {
   }
 };
 
-// Middleware de autenticación CORREGIDO - SIN BUCLE
 app.use(async (req, res, next) => {
   const requestedPath = req.path;
   
   console.log('🔍 Ruta solicitada:', requestedPath);
 
-  // Rutas públicas - EXPANDIDA
   const publicRoutes = [
-    '/',
     '/login', 
     '/health', 
     '/manifest.json',
     '/service-worker.js',
     '/api/auth/login',
-    '/api/auth/register',
-    '/api/auth/logout',
-    '/api/auth/me',
-    '/favicon.ico',
-    '/clear-auth' // Ruta temporal para limpiar autenticación
+    '/api/auth/register'
   ];
   
-  const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/', '/fonts/'];
+  // 🔥 CORRECCIÓN: Agregar screenshots a rutas públicas
+  const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/', '/screenshots/'];
   
   const isPublicRoute = publicRoutes.includes(requestedPath) || 
                        publicStaticPaths.some(publicPath => requestedPath.startsWith(publicPath)) ||
                        requestedPath.startsWith('/api/auth/');
-
-  // SIEMPRE permitir acceso a rutas públicas SIN redirección automática
+  
+  if (requestedPath === '/') {
+    console.log('🏠 Ruta raíz solicitada');
+    const token = extractToken(req);
+    const authResult = await verifyAuthentication(token);
+    
+    if (authResult.authenticated) {
+      console.log('✅ Usuario autenticado, redirigiendo a index');
+      return res.redirect('/index');
+    } else {
+      console.log('❌ Usuario no autenticado, redirigiendo a login');
+      return res.redirect('/login');
+    }
+  }
+  
   if (isPublicRoute) {
-    console.log('🌐 Ruta pública, acceso permitido:', requestedPath);
+    console.log('🌐 Ruta pública, acceso permitido');
+    
+    if (requestedPath === '/login' && req.method === 'GET') {
+      const token = extractToken(req);
+      const authResult = await verifyAuthentication(token);
+      if (authResult.authenticated) {
+        console.log('🔄 Usuario ya autenticado, redirigiendo a index');
+        return res.redirect('/index');
+      }
+    }
+    
     return next();
   }
 
-  // Solo las rutas protegidas requieren autenticación
   console.log('🛡️ Ruta requiere autenticación:', requestedPath);
   const token = extractToken(req);
   
@@ -111,101 +109,58 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Servir archivos estáticos
-app.use(express.static(path.join(__dirname, 'frontend')));
+// 🔥 CORRECCIÓN: Ya no necesitas este static adicional
+// app.use(express.static(path.join(__dirname, '../frontend'), {
+//   index: false
+// }));
 
-// Rutas específicas del frontend - SIN redirección automática
-app.get(['/', '/login'], (req, res) => {
-  console.log('🌐 Sirviendo página de login/raíz');
-  res.sendFile(path.join(__dirname, 'frontend', 'login.html'));
+app.get('/login', (req, res) => {
+  console.log('🌐 Sirviendo página de login');
+  res.sendFile(path.join(__dirname, '../frontend', 'login.html'));
 });
 
 app.get('/index', (req, res) => {
-  console.log('📊 Sirviendo dashboard para usuario:', req.user?.email || 'No user');
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  console.log('📊 Sirviendo dashboard para usuario:', req.user.email);
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
 app.get('/index.html', (req, res) => {
-  console.log('📊 Sirviendo dashboard via index.html');
+  console.log('📊 Sirviendo dashboard via index.html para usuario:', req.user.email);
   res.redirect('/index');
 });
 
-// Health check mejorado
 app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'Servidor funcionando correctamente',
-    timestamp: new Date().toISOString(),
-    environment: NODE_ENV,
-    port: PORT
+    timestamp: new Date().toISOString()
   });
 });
 
-// Ruta temporal para limpiar autenticación (ELIMINAR después de usar)
-app.get('/clear-auth', (req, res) => {
-  console.log('🧹 Limpiando autenticación...');
-  res.clearCookie('authToken');
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Limpieza de Autenticación</title>
-        <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            .success { color: green; }
-        </style>
-    </head>
-    <body>
-        <h1 class="success">✅ Autenticación limpiada</h1>
-        <p>Cookies y localStorage han sido limpiados.</p>
-        <p>Redirigiendo a login...</p>
-        <script>
-            localStorage.clear();
-            setTimeout(() => {
-                window.location.href = '/login';
-            }, 2000);
-        </script>
-    </body>
-    </html>
-  `);
-});
-
-// Rutas de API
 app.use('/api/auth', authRoutes);
 
-// Manejo de rutas no encontradas - CORREGIDO
 app.use('*', (req, res) => {
   console.log('❌ Ruta no encontrada:', req.originalUrl);
   
-  // Solo redirigir para rutas que parecen páginas (no archivos)
-  if (!req.originalUrl.includes('.') || 
-      req.originalUrl.endsWith('.html') || 
-      req.originalUrl === '/') {
-    
+  if (!req.originalUrl.includes('.') || req.originalUrl.endsWith('.html')) {
     const token = extractToken(req);
     if (token) {
       try {
         const jwt = require('jsonwebtoken');
         jwt.verify(token, config.jwt.secret);
-        console.log('🔄 Redirigiendo a index desde 404');
         return res.redirect('/index');
       } catch (error) {
-        console.log('❌ Token inválido en 404, redirigiendo a login');
-        // Token inválido, redirigir a login
       }
     }
-    console.log('🔄 Redirigiendo a login desde 404');
     return res.redirect('/login');
   }
   
-  // Para archivos u otras rutas, devolver 404
   res.status(404).json({ 
     success: false, 
     message: 'Ruta no encontrada' 
   });
 });
 
-// Manejo de errores
 app.use((error, req, res, next) => {
   console.error('💥 Error no manejado:', error);
   res.status(500).json({ 
@@ -214,14 +169,13 @@ app.use((error, req, res, next) => {
   });
 });
 
-// CONFIGURACIÓN DEL PUERTO PARA RENDER/DOCKER
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-  console.log(`📱 Entorno: ${NODE_ENV}`);
-  console.log(`🏠 Ruta principal: https://aplicaciones-web-progresivas.onrender.com/`);
-  console.log(`🔑 Login: https://aplicaciones-web-progresivas.onrender.com/login`);
-  console.log(`📊 Dashboard: https://aplicaciones-web-progresivas.onrender.com/index`);
-  console.log(`❤️  Health check: https://aplicaciones-web-progresivas.onrender.com/health`);
-  console.log(`🧹 Limpiar auth: https://aplicaciones-web-progresivas.onrender.com/clear-auth`);
-  console.log('🛡️  PROTECCIÓN ACTIVADA - SIN BUCLE');
+app.listen(config.port, () => {
+  console.log(`🚀 Servidor ejecutándose en http://localhost:${config.port}`);
+  console.log(`📱 Entorno: ${config.nodeEnv}`);
+  console.log(`🏠 Ruta principal: http://localhost:${config.port}/ (redirige a index o login)`);
+  console.log(`🔑 Login: http://localhost:${config.port}/login`);
+  console.log(`📊 Dashboard: http://localhost:${config.port}/index (PROTEGIDO)`);
+  console.log(`❤️  Health check: http://localhost:${config.port}/health`);
+  console.log('🛡️  PROTECCIÓN COMPLETA ACTIVADA');
+  console.log('📁 Archivos estáticos servidos desde: ../frontend/');
 });
