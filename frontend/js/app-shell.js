@@ -1,40 +1,58 @@
-// app-shell.js - Gestión simplificada del App Shell
 console.log('🔧 Cargando App Shell...');
 
 class AppShell {
     constructor() {
         this.isInitialized = false;
+        this.isInitializing = false;
+        this.readyCallbacks = [];
         console.log('🏗️ Constructor App Shell llamado');
         this.init();
     }
 
     async init() {
-        if (this.isInitialized) return;
+        if (this.isInitialized || this.isInitializing) return;
         
+        this.isInitializing = true;
         console.log('🚀 Inicializando App Shell...');
-        this.setupAppShell();
-        await this.registerServiceWorker();
-        this.isInitialized = true;
         
-        console.log('✅ App Shell inicializado correctamente');
+        try {
+            await this.setupAppShell();
+            await this.registerServiceWorker();
+            this.isInitialized = true;
+            this.isInitializing = false;
+            
+            console.log('✅ App Shell inicializado correctamente');
+            this.executeReadyCallbacks();
+        } catch (error) {
+            console.error('❌ Error inicializando App Shell:', error);
+            this.isInitializing = false;
+            // Fallback: ejecutar callbacks incluso si hay error
+            this.executeReadyCallbacks();
+        }
     }
 
     async registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.register('/service-worker.js');
-                console.log('✅ Service Worker registrado:', registration.scope);
-                return registration;
-            } catch (error) {
-                console.log('❌ Service Worker falló:', error);
-            }
+    // CORRECCIÓN: navigator.serviceWorker (no navigatorServiceWorker)
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('✅ Service Worker registrado:', registration.scope);
+            return registration;
+        } catch (error) {
+            console.log('❌ Service Worker falló:', error);
+            return null;
         }
+    } else {
+        console.log('⚠️ Service Worker no soportado en este navegador');
         return null;
     }
+}
 
     setupAppShell() {
-        this.createLoadingScreen();
-        this.handleAppLoad();
+        return new Promise((resolve) => {
+            this.createLoadingScreen();
+            this.handleAppLoad(resolve);
+        });
     }
 
     createLoadingScreen() {
@@ -107,14 +125,21 @@ class AppShell {
         document.head.insertAdjacentHTML('beforeend', criticalCSS);
     }
 
-    handleAppLoad() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
+    handleAppLoad(resolve) {
+        const checkReady = () => {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    this.showAppContent();
+                    resolve();
+                });
+            } else {
                 this.showAppContent();
-            });
-        } else {
-            this.showAppContent();
-        }
+                resolve();
+            }
+        };
+
+        // Pequeño delay para asegurar que el DOM esté listo
+        setTimeout(checkReady, 100);
     }
 
     showAppContent() {
@@ -144,19 +169,38 @@ class AppShell {
     emitAppReady() {
         console.log('🎉 App Shell completamente cargado - emitiendo evento');
         const event = new CustomEvent('appReady', {
-            detail: { timestamp: new Date() }
+            detail: { 
+                timestamp: new Date(),
+                appShell: this
+            }
         });
         window.dispatchEvent(event);
     }
 
+    executeReadyCallbacks() {
+        console.log('📞 Ejecutando callbacks listos:', this.readyCallbacks.length);
+        while (this.readyCallbacks.length > 0) {
+            const callback = this.readyCallbacks.shift();
+            try {
+                callback();
+            } catch (error) {
+                console.error('Error en callback appReady:', error);
+            }
+        }
+    }
+
     onAppReady(callback) {
-        console.log('📞 onAppReady llamado');
-        if (this.isInitialized && document.readyState === 'complete') {
+        console.log('📞 onAppReady llamado, estado:', {
+            initialized: this.isInitialized,
+            initializing: this.isInitializing
+        });
+        
+        if (this.isInitialized) {
             console.log('✅ App ya inicializado, ejecutando callback inmediatamente');
             setTimeout(callback, 100);
         } else {
-            console.log('⏳ Esperando evento appReady...');
-            window.addEventListener('appReady', callback);
+            console.log('⏳ Agregando callback a la cola');
+            this.readyCallbacks.push(callback);
         }
     }
 }
@@ -164,20 +208,23 @@ class AppShell {
 // Inicialización GARANTIZADA del App Shell
 console.log('🔨 Instanciando App Shell...');
 try {
-    const appShell = new AppShell();
-    window.AppShell = appShell;
+    // Verificar si ya existe una instancia
+    if (!window.AppShell) {
+        window.AppShell = new AppShell();
+    }
     console.log('✅ App Shell asignado a window.AppShell:', !!window.AppShell);
     console.log('✅ onAppReady disponible:', typeof window.AppShell.onAppReady === 'function');
 } catch (error) {
     console.error('❌ Error instanciando App Shell:', error);
     // Fallback garantizado
     window.AppShell = {
+        isInitialized: true,
         onAppReady: (callback) => {
             console.log('🔄 Usando fallback onAppReady');
             if (document.readyState === 'complete') {
-                callback();
+                setTimeout(callback, 100);
             } else {
-                window.addEventListener('load', callback);
+                window.addEventListener('load', () => setTimeout(callback, 100));
             }
         }
     };
