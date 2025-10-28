@@ -1,6 +1,6 @@
 console.log('🔧 Service Worker cargando...');
 
-const CACHE_NAME = 'arbored-v11';
+const CACHE_NAME = 'arbored-v7';
 const urlsToCache = [
   '/',
   '/login',
@@ -118,4 +118,3 @@ self.addEventListener('message', (event) => {
   }
 
 });
-
