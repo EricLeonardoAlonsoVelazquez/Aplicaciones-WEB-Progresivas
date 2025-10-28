@@ -1,119 +1,120 @@
-// Configuración de API - CORREGIDA para Render
-const getApiBaseUrl = () => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return '/api/auth';
-    } else {
-        return '/api/auth';
-    }
-};
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? '/api/auth' 
+  : '/.netlify/functions/server/api/auth';
 
-const API_BASE_URL = getApiBaseUrl();
 console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
 console.log('📍 Hostname actual:', window.location.hostname);
 
-const indexController = {
+class ProtectedApp {
+    constructor() {
+        this.isInitialized = false;
+        this.authChecked = false;
+        this.redirecting = false;
+        this.init();
+    }
+
     init() {
-        console.log('🚀 Inicializando indexController...');
-        
-        if (!this.verifyAuthentication()) {
-            return;
-        }
+        console.log('🚀 Inicializando aplicación protegida...');
         
         if (window.AppShell && typeof window.AppShell.onAppReady === 'function') {
-            console.log('✅ AppShell disponible, usando onAppReady');
+            console.log('✅ Usando AppShell para inicialización');
             window.AppShell.onAppReady(() => {
-                console.log('🎉 AppReady recibido - Inicializando aplicación');
-                this.initializeApp();
+                console.log('🎉 AppReady recibido - Verificando autenticación');
+                this.verifyAndInitialize();
             });
         } else {
             console.log('⚠️ AppShell no disponible, usando inicialización directa');
-            this.initializeAppWithFallback();
+            this.initializeWithFallback();
         }
-    },
+    }
 
-    verifyAuthentication() {
-        console.log('🔐 Verificando autenticación...');
-        const token = localStorage.getItem('authToken');
-        const user = localStorage.getItem('user');
-        
-        console.log('🔍 Token en localStorage:', !!token);
-        console.log('🔍 Usuario en localStorage:', !!user);
-        
-        // Si estamos en /index pero no hay token, verificar con servidor
-        if (!token && window.location.pathname === '/index') {
-            console.log('🔄 Verificando si hay sesión en el servidor...');
-            return this.verifyServerSession();
-        }
-        
-        if (!token || !user) {
-            console.log('❌ No autenticado, redirigiendo a login...');
-            this.redirectToLogin();
-            return false;
-        }
-        
-        return true;
-    },
-
-    async verifyServerSession() {
-        try {
-            console.log('🔍 Verificando sesión en servidor...');
-            const response = await fetch(`${API_BASE_URL}/me`, {
-                method: 'GET',
-                credentials: 'include'
+    initializeWithFallback() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('📄 DOMContentLoaded (fallback)');
+                this.verifyAndInitialize();
             });
+        } else {
+            console.log('📄 DOM ya listo (fallback)');
+            this.verifyAndInitialize();
+        }
+    }
+
+    async verifyAndInitialize() {
+        if (this.authChecked || this.redirecting) {
+            console.log('🔁 Verificación ya en progreso, omitiendo...');
+            return;
+        }
+
+        this.authChecked = true;
+        console.log('🔐 Iniciando verificación de autenticación...');
+
+        try {
+            const isAuthenticated = await this.verifyAuthentication();
             
-            console.log('📨 Respuesta de verificación servidor:', response.status);
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.user) {
-                    console.log('✅ Sesión encontrada en servidor, sincronizando...');
-                    // El servidor tiene una sesión válida, sincronizar
-                    this.syncWithServerSession(result);
-                    return true;
-                }
+            if (isAuthenticated) {
+                console.log('✅ Usuario autenticado, inicializando aplicación...');
+                await this.initializeApp();
+            } else {
+                console.log('❌ Usuario no autenticado, redirigiendo a login...');
+                this.redirectToLogin();
             }
         } catch (error) {
-            console.error('❌ Error verificando sesión servidor:', error);
+            console.error('💥 Error en verificación:', error);
+            // En caso de error, usar verificación local como fallback
+            const localAuth = this.verifyLocalAuthentication();
+            if (localAuth) {
+                console.log('🔄 Fallback: Usando autenticación local');
+                await this.initializeApp();
+            } else {
+                this.redirectToLogin();
+            }
         }
+    }
+
+    async verifyAuthentication() {
+        console.log('🔍 Verificando estado de autenticación...');
         
-        // No hay sesión válida en el servidor
-        console.log('❌ No hay sesión válida en servidor');
-        this.redirectToLogin();
-        return false;
-    },
-
-    syncWithServerSession(serverData) {
-        console.log('🔄 Sincronizando con sesión del servidor...');
-        // Guardar datos en localStorage para consistencia
-        if (serverData.user) {
-            localStorage.setItem('user', JSON.stringify(serverData.user));
-        }
-        if (serverData.token) {
-            localStorage.setItem('authToken', serverData.token);
-        } else {
-            // Si no hay token en la respuesta, crear uno simbólico
-            localStorage.setItem('authToken', 'session-active');
-        }
-        console.log('✅ Sincronización completada');
-    },
-
-    verifyLocalAuthentication() {
         const token = localStorage.getItem('authToken');
         const user = localStorage.getItem('user');
         
+        console.log('📊 Estado LOCAL - Token:', !!token, 'Usuario:', !!user);
+        
+        // PRIMERO: Verificación local rápida
         if (!token || !user) {
-            this.handleInvalidToken();
+            console.log('❌ Faltan credenciales en localStorage');
             return false;
         }
-        
-        // Si el token es simbólico (de sincronización), considerar válido
-        if (token === 'session-active') {
-            console.log('✅ Sesión activa (sincronizada con servidor)');
+
+        // SEGUNDO: Verificación local del token
+        const localValid = this.verifyLocalAuthentication();
+        if (!localValid) {
+            console.log('❌ Token inválido localmente');
+            return false;
+        }
+
+        // TERCERO: Intentar verificación con servidor (pero no bloquear si falla)
+        try {
+            const serverValid = await this.verifyTokenWithServer(token);
+            return serverValid;
+        } catch (error) {
+            console.warn('⚠️ Error en verificación con servidor, usando verificación local:', error);
+            // Si falla la verificación con servidor, confiar en la verificación local
             return true;
         }
-        
+    }
+
+    verifyLocalAuthentication() {
         try {
+            console.log('🔍 Realizando verificación local del token...');
+            
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                return false;
+            }
+            
             const tokenParts = token.split('.');
             if (tokenParts.length !== 3) {
                 throw new Error('Formato de token inválido');
@@ -135,53 +136,107 @@ const indexController = {
             this.handleInvalidToken();
             return false;
         }
-    },
+    }
+
+    async verifyTokenWithServer(token) {
+        console.log('🔍 Verificando token con servidor...');
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/verify`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+            
+            console.log('📨 Respuesta de verificación:', response.status, response.statusText);
+            
+            // Verificar si la respuesta es JSON válido
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn('⚠️ Respuesta no es JSON, posible error 404:', await response.text());
+                throw new Error('Endpoint no disponible');
+            }
+            
+            if (response.status === 401 || response.status === 403) {
+                console.log('❌ Token inválido o expirado en servidor');
+                this.handleInvalidToken();
+                return false;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('📊 Resultado de verificación:', result);
+            
+            if (result.success) {
+                console.log('✅ Token verificado correctamente con servidor');
+                if (result.user) {
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                }
+                return true;
+            } else {
+                console.log('❌ Token inválido según servidor');
+                this.handleInvalidToken();
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Error verificando token con servidor:', error);
+            // Propagar el error para manejo en nivel superior
+            throw error;
+        }
+    }
 
     handleInvalidToken() {
         console.log('🗑️ Limpiando datos de autenticación inválidos');
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         
+        // Intentar limpiar cookie del servidor (pero no bloquear si falla)
         fetch(`${API_BASE_URL}/logout`, {
             method: 'POST',
             credentials: 'include'
         }).catch(err => console.log('⚠️ Error al limpiar cookie del servidor:', err));
-        
-        this.redirectToLogin();
-    },
+    }
 
     redirectToLogin() {
-        console.log('🔄 Redirigiendo a login...');
-        window.location.replace('/login');
-    },
-
-    initializeAppWithFallback() {
-        console.log('🔄 Usando fallback de inicialización');
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('📄 DOMContentLoaded (fallback)');
-                this.initializeApp();
-            });
-        } else {
-            console.log('📄 DOM ya listo (fallback)');
-            this.initializeApp();
-        }
-    },
-
-    initializeApp() {
-        console.log('🏁 Inicializando aplicación index...');
-        
-        if (!this.verifyLocalAuthentication()) {
+        if (this.redirecting) {
+            console.log('🔁 Redirección ya en progreso, omitiendo...');
             return;
         }
         
-        this.initEventListeners();
-        this.initUI();
-        this.initSmoothScroll();
-        this.updateUIWithUserInfo();
-        this.setupScrollHeader();
-        console.log('✅ Aplicación index inicializada completamente');
-    },
+        this.redirecting = true;
+        console.log('🔄 Redirigiendo a login...');
+        
+        // Pequeño delay para permitir que los logs se muestren
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 100);
+    }
+
+    async initializeApp() {
+        if (this.isInitialized) {
+            console.log('🔁 Aplicación ya inicializada, omitiendo...');
+            return;
+        }
+
+        console.log('🏁 Inicializando aplicación index...');
+        
+        try {
+            this.initEventListeners();
+            this.initUI();
+            this.updateUIWithUserInfo();
+            
+            this.isInitialized = true;
+            console.log('✅ Aplicación index inicializada completamente');
+        } catch (error) {
+            console.error('💥 Error inicializando aplicación:', error);
+        }
+    }
 
     initEventListeners() {
         console.log('🔗 Configurando event listeners...');
@@ -240,17 +295,14 @@ const indexController = {
                 }
             });
         });
-
-        window.addEventListener('beforeunload', () => {
-            console.log('🔒 Cerrando aplicación protegida...');
-        });
-    },
+    }
 
     initUI() {
         console.log('🎨 Inicializando UI...');
         this.updateFooterYear();
         this.initScrollAnimations();
-    },
+        this.setupScrollHeader();
+    }
 
     updateUIWithUserInfo() {
         console.log('👤 Actualizando información de usuario...');
@@ -278,7 +330,7 @@ const indexController = {
                 existingDropdown.remove();
             }
         }
-    },
+    }
 
     createUserDropdown(loginLink, user) {
         console.log('📋 Creando dropdown de usuario...');
@@ -301,14 +353,6 @@ const indexController = {
         
         loginLink.parentNode.appendChild(dropdownContainer);
         
-        const userLogoutBtn = document.getElementById('userLogoutBtn');
-        if (userLogoutBtn) {
-            userLogoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleLogout();
-            });
-        }
-        
         loginLink.addEventListener('click', (e) => {
             e.preventDefault();
             dropdownContainer.classList.toggle('active');
@@ -319,53 +363,26 @@ const indexController = {
                 dropdownContainer.classList.remove('active');
             }
         });
-    },
+    }
 
     async handleLogout() {
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             console.log('🚪 Cerrando sesión...');
             
             try {
-                const result = await fetch(`${API_BASE_URL}/logout`, {
+                await fetch(`${API_BASE_URL}/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
-                
-                console.log('✅ Sesión cerrada en servidor');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
-                
             } catch (error) {
-                console.error('Error al cerrar sesión:', error);
+                console.error('Error al cerrar sesión en servidor:', error);
+            } finally {
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('user');
                 window.location.href = '/login';
             }
         }
-    },
-
-    initSmoothScroll() {
-        console.log('🔄 Configurando scroll suave...');
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    const headerHeight = document.querySelector('header').offsetHeight;
-                    const targetPosition = targetElement.offsetTop - headerHeight - 20;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-    },
+    }
 
     initScrollAnimations() {
         console.log('🎭 Configurando animaciones de scroll...');
@@ -389,21 +406,25 @@ const indexController = {
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
             observer.observe(el);
         });
-    },
+    }
 
     setupScrollHeader() {
         console.log('📏 Configurando header con scroll...');
+        let scrollTimeout;
         window.addEventListener('scroll', () => {
-            const header = document.querySelector('header');
-            if (window.scrollY > 100) {
-                header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-                header.style.background = 'rgba(255, 255, 255, 0.98)';
-            } else {
-                header.style.boxShadow = '0 5px 20px rgba(139, 0, 0, 0.2)';
-                header.style.background = 'rgba(255, 255, 255, 0.95)';
-            }
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const header = document.querySelector('header');
+                if (window.scrollY > 100) {
+                    header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
+                    header.style.background = 'rgba(255, 255, 255, 0.98)';
+                } else {
+                    header.style.boxShadow = '0 5px 20px rgba(139, 0, 0, 0.2)';
+                    header.style.background = 'rgba(255, 255, 255, 0.95)';
+                }
+            }, 10);
         });
-    },
+    }
 
     updateFooterYear() {
         const yearElement = document.getElementById('current-year');
@@ -411,67 +432,17 @@ const indexController = {
             yearElement.textContent = new Date().getFullYear();
         }
     }
-};
+}
 
 // Inicialización de la aplicación protegida
 console.log('🔧 Iniciando aplicación index protegida...');
 
-function initializeProtectedApp() {
-    console.log('📄 Inicializando aplicación protegida...');
-    
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    console.log('🔍 Estado de autenticación - Token:', !!token, 'Usuario:', !!user);
-    console.log('📍 Ruta actual:', window.location.pathname);
-    
-    // Si estamos en login pero tenemos token, redirigir a index
-    if ((token && user) && window.location.pathname === '/login') {
-        console.log('✅ Usuario autenticado en login, redirigiendo a index...');
-        window.location.replace('/index');
-        return;
-    }
-    
-    // Si estamos en index pero no tenemos token, verificar autenticación
-    if ((!token || !user) && window.location.pathname === '/index') {
-        console.log('❌ No autenticado en index, verificando...');
-        indexController.verifyAuthentication();
-        return;
-    }
-    
-    // Solo inicializar si estamos autenticados y en la ruta correcta
-    if (token && user && window.location.pathname === '/index') {
-        console.log('✅ Usuario autenticado, inicializando aplicación...');
-        indexController.init();
-    }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeProtectedApp);
+// Evitar múltiples inicializaciones
+if (!window.protectedAppInitialized) {
+    window.protectedAppInitialized = true;
+    new ProtectedApp();
 } else {
-    initializeProtectedApp();
+    console.log('🔁 Aplicación protegida ya inicializada, omitiendo...');
 }
 
-// Verificación de seguridad adicional
-setTimeout(() => {
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    if ((!token || !user) && window.location.pathname === '/index') {
-        console.log('⏰ Timeout de seguridad - Redirigiendo a login');
-        window.location.replace('/login');
-    }
-}, 3000);
-
-window.addEventListener('load', () => {
-    console.log('🛡️ Aplicación cargada - Verificación final');
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
-    
-    if ((!token || !user) && window.location.pathname === '/index') {
-        console.log('🚫 Acceso no autorizado detectado después de carga');
-        window.location.replace('/login');
-    }
-});
-
-console.log('✅ index.js cargado completamente - VERSIÓN CORREGIDA SIN BUCLE');
+console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
