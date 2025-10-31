@@ -1,16 +1,19 @@
 // service-worker.js
 console.log('🔧 Service Worker cargando...');
 
-const CACHE_NAME = 'arbored-v9';
+const CACHE_NAME = 'arbored-v12';
 const urlsToCache = [
   '/',
   '/index.html',
   '/login.html',
+  '/dashboard.html',
   '/css/style.css',
   '/css/index.css',
+  '/css/dashboard.css',
   '/js/app-shell.js',
   '/js/auth.js',
   '/js/index.js',
+  '/js/dashboard.js',
   '/manifest.json',
   '/icons/ArbolRed.png',
   '/screenshots/image.png'

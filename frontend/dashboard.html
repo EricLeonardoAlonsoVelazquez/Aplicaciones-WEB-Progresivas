@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Árbol Red</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4a7c1f">
+    
+    <!-- Styles & Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="background-container">
+        <div class="network-node node-1"></div>
+        <div class="network-node node-2"></div>
+        <div class="network-node node-3"></div>
+        <div class="network-node node-4"></div>
+        <div class="network-node node-5"></div>
+    </div>
+
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-network-wired"></i>
+                    <h1>Árbol Red - Dashboard</h1>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="/">Inicio</a></li>
+                        <li><a href="#" id="userMenuLink">Usuario</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-content">
+        <div class="container">
+            <div class="dashboard-header">
+                <h2>Panel de Control</h2>
+                <p>Bienvenido al sistema de monitoreo inteligente</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-tree"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Árboles Monitoreados</h3>
+                        <span class="stat-number">1</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Sensores Activos</h3>
+                        <span class="stat-number">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nueva sección de Recursos (Apps y Juego) -->
+            <div class="resources-section">
+                <h2 class="section-title">Recursos Adicionales</h2>
+                <div class="resources-grid">
+                    <div class="resource-card">
+                        <div class="resource-logo">
+                            <img src="icons/ArbolRed.png" alt="Logo Árbol Red" class="resource-image">
+                        </div>
+                        <h3><i class="fas fa-cloud-download-alt"></i> App Móvil</h3>
+                        <p>Aplicación Móvil para Monitorear el Arbolado. Descarga nuestra aplicación para tener acceso completo a las funcionalidades de monitoreo desde tu dispositivo móvil.</p>
+                        <a href="https://www.mediafire.com/file/nigvw2hdibr1108/ArbolRed.apk/file" target="_blank" class="btn-secondary">
+                            <i class="fas fa-external-link-alt"></i> Descargar desde MediaFire
+                        </a>
+                    </div>
+                    <div class="resource-card">
+                        <div class="resource-logo">
+                            <img src="icons/ArbolRed.png" alt="Logo Árbol Red" class="resource-image">
+                        </div>
+                        <h3><i class="fas fa-gamepad"></i> Juego Educativo</h3>
+                        <p>Juega una experiencia de Fútbol con toques de arbolado. Aprende sobre la importancia del cuidado de los árboles mientras te diviertes con este juego educativo.</p>
+                        <a href="https://www.roblox.com" target="_blank" class="btn-secondary">
+                            <i class="fas fa-external-link-alt"></i> Jugar en Roblox
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <i class="fas fa-network-wired"></i>
+                    <h3>Árbol Red - Dashboard</h3>
+                </div>
+                <div class="footer-links">
+                    <a href="/">Inicio</a>
+                    <a href="/dashboard">Dashboard</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="current-year">2024</span> Árbol Red. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/app-shell.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

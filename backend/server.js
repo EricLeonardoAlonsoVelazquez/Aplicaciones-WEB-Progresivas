@@ -16,10 +16,8 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🔥 CORRECCIÓN: Servir TODOS los archivos estáticos del frontend
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../frontend')));
-
-// 🔥 CORRECCIÓN ESPECÍFICA para screenshots (si están en frontend/screenshots/)
 app.use('/screenshots', express.static(path.join(__dirname, '../frontend/screenshots')));
 
 const verifyAuthentication = async (token) => {
@@ -39,68 +37,75 @@ const verifyAuthentication = async (token) => {
   }
 };
 
+// 🔥 CORRECCIÓN: Definir rutas públicas y protegidas
 app.use(async (req, res, next) => {
   const requestedPath = req.path;
   
   console.log('🔍 Ruta solicitada:', requestedPath);
 
+  // Rutas públicas (acceso sin autenticación)
   const publicRoutes = [
+    '/', 
     '/login', 
     '/health', 
     '/manifest.json',
     '/service-worker.js',
     '/api/auth/login',
-    '/api/auth/register'
+    '/api/auth/register',
+    '/index.html'
   ];
   
-  // 🔥 CORRECCIÓN: Agregar screenshots a rutas públicas
   const publicStaticPaths = ['/css/', '/js/', '/icons/', '/img/', '/screenshots/'];
   
   const isPublicRoute = publicRoutes.includes(requestedPath) || 
                        publicStaticPaths.some(publicPath => requestedPath.startsWith(publicPath)) ||
                        requestedPath.startsWith('/api/auth/');
   
+  // RUTA RAÍZ: Siempre pública, muestra index.html
   if (requestedPath === '/') {
-    console.log('🏠 Ruta raíz solicitada');
+    console.log('🏠 Ruta raíz solicitada - PÚBLICA');
+    return res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+  }
+  
+  // RUTA LOGIN: Pública, pero si ya está autenticado redirige a dashboard
+  if (requestedPath === '/login' && req.method === 'GET') {
     const token = extractToken(req);
     const authResult = await verifyAuthentication(token);
-    
     if (authResult.authenticated) {
-      console.log('✅ Usuario autenticado, redirigiendo a index');
-      return res.redirect('/index');
-    } else {
-      console.log('❌ Usuario no autenticado, redirigiendo a login');
-      return res.redirect('/login');
+      console.log('🔄 Usuario ya autenticado, redirigiendo a dashboard');
+      return res.redirect('/dashboard');
     }
   }
   
+  // RUTAS PÚBLICAS: Acceso libre
   if (isPublicRoute) {
     console.log('🌐 Ruta pública, acceso permitido');
-    
-    if (requestedPath === '/login' && req.method === 'GET') {
-      const token = extractToken(req);
-      const authResult = await verifyAuthentication(token);
-      if (authResult.authenticated) {
-        console.log('🔄 Usuario ya autenticado, redirigiendo a index');
-        return res.redirect('/index');
-      }
-    }
-    
     return next();
   }
 
-  console.log('🛡️ Ruta requiere autenticación:', requestedPath);
-  const token = extractToken(req);
+  // 🔐 RUTAS PROTEGIDAS: Requieren autenticación
+  console.log('🛡️ Ruta protegida:', requestedPath);
   
-  if (!token) {
-    console.log('❌ No autenticado, redirigiendo a login');
-    return res.redirect('/login');
+  // DASHBOARD: Protegida
+  if (requestedPath === '/dashboard' || requestedPath === '/dashboard.html') {
+    const token = extractToken(req);
+    const authResult = await verifyAuthentication(token);
+    
+    if (!authResult.authenticated) {
+      console.log('❌ No autenticado, redirigiendo a login');
+      return res.redirect('/login');
+    }
+    
+    console.log('✅ Usuario autenticado para dashboard:', authResult.user.email);
+    req.user = authResult.user;
+    return next();
   }
 
+  // Otras rutas protegidas
+  const token = extractToken(req);
   const authResult = await verifyAuthentication(token);
   if (!authResult.authenticated) {
-    console.log('❌ Token inválido o expirado, redirigiendo a login');
-    res.clearCookie('authToken');
+    console.log('❌ No autenticado, redirigiendo a login');
     return res.redirect('/login');
   }
 
@@ -109,23 +114,30 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// 🔥 CORRECCIÓN: Ya no necesitas este static adicional
-// app.use(express.static(path.join(__dirname, '../frontend'), {
-//   index: false
-// }));
+// 🔥 NUEVA RUTA: Dashboard protegido
+app.get('/dashboard', (req, res) => {
+  console.log('📊 Sirviendo dashboard para usuario:', req.user.email);
+  res.sendFile(path.join(__dirname, '../frontend', 'dashboard.html'));
+});
 
+app.get('/dashboard.html', (req, res) => {
+  console.log('📊 Sirviendo dashboard via dashboard.html para usuario:', req.user.email);
+  res.redirect('/dashboard');
+});
+
+// Rutas existentes
 app.get('/login', (req, res) => {
   console.log('🌐 Sirviendo página de login');
   res.sendFile(path.join(__dirname, '../frontend', 'login.html'));
 });
 
 app.get('/index', (req, res) => {
-  console.log('📊 Sirviendo dashboard para usuario:', req.user.email);
+  console.log('🏠 Sirviendo página principal (index)');
   res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
 app.get('/index.html', (req, res) => {
-  console.log('📊 Sirviendo dashboard via index.html para usuario:', req.user.email);
+  console.log('🏠 Sirviendo página principal via index.html');
   res.redirect('/index');
 });
 
@@ -141,24 +153,7 @@ app.use('/api/auth', authRoutes);
 
 app.use('*', (req, res) => {
   console.log('❌ Ruta no encontrada:', req.originalUrl);
-  
-  if (!req.originalUrl.includes('.') || req.originalUrl.endsWith('.html')) {
-    const token = extractToken(req);
-    if (token) {
-      try {
-        const jwt = require('jsonwebtoken');
-        jwt.verify(token, config.jwt.secret);
-        return res.redirect('/index');
-      } catch (error) {
-      }
-    }
-    return res.redirect('/login');
-  }
-  
-  res.status(404).json({ 
-    success: false, 
-    message: 'Ruta no encontrada' 
-  });
+  res.redirect('/');
 });
 
 app.use((error, req, res, next) => {
@@ -171,11 +166,8 @@ app.use((error, req, res, next) => {
 
 app.listen(config.port, () => {
   console.log(`🚀 Servidor ejecutándose en http://localhost:${config.port}`);
-  console.log(`📱 Entorno: ${config.nodeEnv}`);
-  console.log(`🏠 Ruta principal: http://localhost:${config.port}/ (redirige a index o login)`);
-  console.log(`🔑 Login: http://localhost:${config.port}/login`);
-  console.log(`📊 Dashboard: http://localhost:${config.port}/index (PROTEGIDO)`);
-  console.log(`❤️  Health check: http://localhost:${config.port}/health`);
-  console.log('🛡️  PROTECCIÓN COMPLETA ACTIVADA');
-  console.log('📁 Archivos estáticos servidos desde: ../frontend/');
+  console.log(`🏠 Página principal: http://localhost:${config.port}/ (PÚBLICA)`);
+  console.log(`🔑 Login: http://localhost:${config.port}/login (PÚBLICA)`);
+  console.log(`📊 Dashboard: http://localhost:${config.port}/dashboard (PROTEGIDA)`);
+  console.log('🛡️ SISTEMA DE RUTAS CONFIGURADO CORRECTAMENTE');
 });

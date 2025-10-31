@@ -1,3 +1,4 @@
+// auth.js
 const API_BASE_URL = '/api/auth';
 
 class AuthController {
@@ -61,9 +62,9 @@ class AuthController {
             console.log('🔄 Credenciales locales encontradas, verificando con servidor...');
             const isValid = await this.verifyTokenWithServer(token);
             if (isValid) {
-                console.log('✅ Token válido, redirigiendo a index...');
+                console.log('✅ Token válido, redirigiendo a dashboard...');
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "/dashboard";
                 }, 500);
                 return;
             }
@@ -73,9 +74,9 @@ class AuthController {
         console.log('🔄 Verificando autenticación con servidor...');
         const serverAuth = await this.verifyServerAuthentication();
         if (serverAuth) {
-            console.log('✅ Servidor reporta autenticado, redirigiendo a index...');
+            console.log('✅ Servidor reporta autenticado, redirigiendo a dashboard...');
             setTimeout(() => {
-                window.location.href = "index.html";
+                window.location.href = "/dashboard";
             }, 500);
         }
     }
@@ -165,7 +166,7 @@ class AuthController {
             if (result.success) {
                 this.showMessage('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "/dashboard";
                 }, 1000);
             } else {
                 this.showMessage(result.message || 'Error en el login', 'error');
@@ -200,7 +201,7 @@ class AuthController {
             if (result.success) {
                 this.showMessage('¡Registro exitoso! Redirigiendo...', 'success');
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "/dashboard";
                 }, 1000);
             } else {
                 this.showMessage(result.message || 'Error en el registro', 'error');
@@ -277,7 +278,6 @@ class AuthController {
         }
     }
 
-    // ... (mantener los métodos de validación y UI existentes)
     validateLoginForm(email, password) {
         let isValid = true;
         

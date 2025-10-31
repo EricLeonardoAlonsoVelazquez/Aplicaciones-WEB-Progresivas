@@ -1,10 +1,4 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? '/api/auth' 
-  : '/.netlify/functions/server/api/auth';
-
-console.log('🔧 API_BASE_URL configurado para:', API_BASE_URL);
-console.log('📍 Hostname actual:', window.location.hostname);
-
+// index.js
 class ProtectedApp {
     constructor() {
         this.isInitialized = false;
@@ -56,19 +50,13 @@ class ProtectedApp {
                 console.log('✅ Usuario autenticado, inicializando aplicación...');
                 await this.initializeApp();
             } else {
-                console.log('❌ Usuario no autenticado, redirigiendo a login...');
-                this.redirectToLogin();
+                console.log('❌ Usuario no autenticado, mostrando página pública...');
+                await this.initializePublicApp();
             }
         } catch (error) {
             console.error('💥 Error en verificación:', error);
-            // En caso de error, usar verificación local como fallback
-            const localAuth = this.verifyLocalAuthentication();
-            if (localAuth) {
-                console.log('🔄 Fallback: Usando autenticación local');
-                await this.initializeApp();
-            } else {
-                this.redirectToLogin();
-            }
+            // En caso de error, mostrar página pública
+            await this.initializePublicApp();
         }
     }
 
@@ -142,7 +130,7 @@ class ProtectedApp {
         console.log('🔍 Verificando token con servidor...');
         
         try {
-            const response = await fetch(`${API_BASE_URL}/verify`, {
+            const response = await fetch(`/api/auth/verify`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -197,25 +185,10 @@ class ProtectedApp {
         localStorage.removeItem('user');
         
         // Intentar limpiar cookie del servidor (pero no bloquear si falla)
-        fetch(`${API_BASE_URL}/logout`, {
+        fetch(`/api/auth/logout`, {
             method: 'POST',
             credentials: 'include'
         }).catch(err => console.log('⚠️ Error al limpiar cookie del servidor:', err));
-    }
-
-    redirectToLogin() {
-        if (this.redirecting) {
-            console.log('🔁 Redirección ya en progreso, omitiendo...');
-            return;
-        }
-        
-        this.redirecting = true;
-        console.log('🔄 Redirigiendo a login...');
-        
-        // Pequeño delay para permitir que los logs se muestren
-        setTimeout(() => {
-            window.location.href = '/login';
-        }, 100);
     }
 
     async initializeApp() {
@@ -224,7 +197,7 @@ class ProtectedApp {
             return;
         }
 
-        console.log('🏁 Inicializando aplicación index...');
+        console.log('🏁 Inicializando aplicación index para usuario autenticado...');
         
         try {
             this.initEventListeners();
@@ -232,9 +205,29 @@ class ProtectedApp {
             this.updateUIWithUserInfo();
             
             this.isInitialized = true;
-            console.log('✅ Aplicación index inicializada completamente');
+            console.log('✅ Aplicación index inicializada completamente para usuario autenticado');
         } catch (error) {
             console.error('💥 Error inicializando aplicación:', error);
+        }
+    }
+
+    async initializePublicApp() {
+        if (this.isInitialized) {
+            console.log('🔁 Aplicación pública ya inicializada, omitiendo...');
+            return;
+        }
+
+        console.log('🏁 Inicializando aplicación index pública...');
+        
+        try {
+            this.initEventListeners();
+            this.initUI();
+            this.updateUIWithUserInfo(); // También actualiza UI para usuarios no autenticados
+            
+            this.isInitialized = true;
+            console.log('✅ Aplicación index pública inicializada completamente');
+        } catch (error) {
+            console.error('💥 Error inicializando aplicación pública:', error);
         }
     }
 
@@ -308,26 +301,44 @@ class ProtectedApp {
         console.log('👤 Actualizando información de usuario...');
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         const loginLink = document.getElementById('userMenuLink');
+        const dashboardBtn = document.getElementById('dashboardBtn');
         
         console.log('🔍 Usuario en localStorage:', user);
         
-        if (user && user.name && loginLink) {
-            console.log('✅ Mostrando información de usuario:', user.name);
+        if (user && user.name) {
+            console.log('✅ Usuario autenticado:', user.name);
             
-            loginLink.textContent = user.name;
-            loginLink.href = '#';
-            loginLink.style.fontWeight = '500';
+            // Actualizar enlace de usuario en el header
+            if (loginLink) {
+                loginLink.textContent = user.name;
+                loginLink.href = '#';
+                loginLink.style.fontWeight = '500';
+                this.createUserDropdown(loginLink, user);
+            }
             
-            this.createUserDropdown(loginLink, user);
-        } else if (loginLink) {
-            console.log('ℹ️ No hay usuario, mostrando "Iniciar Sesión"');
-            loginLink.textContent = 'Iniciar Sesión';
-            loginLink.href = '/login';
-            loginLink.style.fontWeight = '400';
+            // Mostrar botón del dashboard
+            if (dashboardBtn) {
+                dashboardBtn.style.display = 'inline-block';
+            }
             
-            const existingDropdown = document.querySelector('.user-dropdown');
-            if (existingDropdown) {
-                existingDropdown.remove();
+        } else {
+            console.log('ℹ️ No hay usuario autenticado');
+            
+            // Restaurar enlace de login
+            if (loginLink) {
+                loginLink.textContent = 'Iniciar Sesión';
+                loginLink.href = '/login';
+                loginLink.style.fontWeight = '400';
+                
+                const existingDropdown = document.querySelector('.user-dropdown');
+                if (existingDropdown) {
+                    existingDropdown.remove();
+                }
+            }
+            
+            // Ocultar botón del dashboard
+            if (dashboardBtn) {
+                dashboardBtn.style.display = 'none';
             }
         }
     }
@@ -345,6 +356,9 @@ class ProtectedApp {
         dropdownContainer.innerHTML = `
             <div class="user-menu">
                 <span class="user-greeting">Hola, ${user.name}</span>
+                <a href="/dashboard" class="dashboard-link">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
                 <button id="userLogoutBtn" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </button>
@@ -370,7 +384,7 @@ class ProtectedApp {
             console.log('🚪 Cerrando sesión...');
             
             try {
-                await fetch(`${API_BASE_URL}/logout`, {
+                await fetch(`/api/auth/logout`, {
                     method: 'POST',
                     credentials: 'include'
                 });
@@ -379,7 +393,7 @@ class ProtectedApp {
             } finally {
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('user');
-                window.location.href = '/login';
+                window.location.href = '/';
             }
         }
     }
@@ -435,14 +449,14 @@ class ProtectedApp {
 }
 
 // Inicialización de la aplicación protegida
-console.log('🔧 Iniciando aplicación index protegida...');
+console.log('🔧 Iniciando aplicación index...');
 
 // Evitar múltiples inicializaciones
 if (!window.protectedAppInitialized) {
     window.protectedAppInitialized = true;
     new ProtectedApp();
 } else {
-    console.log('🔁 Aplicación protegida ya inicializada, omitiendo...');
+    console.log('🔁 Aplicación ya inicializada, omitiendo...');
 }
 
-console.log('✅ index.js protegido cargado completamente - VERSIÓN NETLIFY');
+console.log('✅ index.js cargado completamente');
