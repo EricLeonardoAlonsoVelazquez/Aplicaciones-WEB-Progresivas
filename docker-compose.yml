@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -13,31 +13,16 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
     volumes:
-      - ./backend/config/serviceAccountKey.json:/app/backend/config/serviceAccountKey.json:ro
-      - ./frontend:/app/frontend:ro
-    working_dir: /app/backend
+      - ./backend/config/serviceAccountKey.json:/app/config/serviceAccountKey.json:ro
+    working_dir: /app
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    restart: unless-stopped
-    command: node server.js
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - app-network
     restart: unless-stopped
 
 networks:
