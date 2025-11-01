@@ -2,28 +2,28 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar backend primero
+# Copiar package.json e instalar dependencias del backend
 COPY backend/package*.json ./
 RUN npm install
 
-# Copiar el resto del backend
+# Copiar todo el backend
 COPY backend/ ./
 
-# Copiar frontend para que Express pueda servirlo
+# Copiar el frontend a /app/frontend/
 COPY frontend/ ./frontend/
 
-# Crear estructura de carpetas y permisos
-RUN mkdir -p /app/frontend && \
+# Verificar que los archivos se copiaron correctamente
+RUN echo "=== Verificando estructura ===" && \
+    ls -la /app/ && \
+    echo "=== Contenido de frontend/ ===" && \
+    ls -la /app/frontend/
+
+# Crear directorio de config y ajustar permisos
+RUN mkdir -p /app/config && \
     chown -R node:node /app
 
 USER node
 
-# Cambiar el puerto a 3001 para evitar conflictos
-EXPOSE 3001
+EXPOSE 3000
 
-# Health check corregido
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
-
-# Comando de inicio
 CMD ["node", "server.js"]
