@@ -8,6 +8,10 @@
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4a7c1f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Arbored">
+    <link rel="apple-touch-icon" href="icons/ArbolRed.png">
     
     <!-- Styles & Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -21,6 +25,10 @@
         <div class="network-node node-3"></div>
         <div class="network-node node-4"></div>
         <div class="network-node node-5"></div>
+        
+        <div class="network-line line-1"></div>
+        <div class="network-line line-2"></div>
+        <div class="network-line line-3"></div>
     </div>
 
     <header>
@@ -28,12 +36,31 @@
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-network-wired"></i>
-                    <h1>Árbol Red - Dashboard</h1>
+                    <h1>Árbol Red</h1>
                 </div>
                 <nav>
                     <ul>
-                        <li><a href="/">Inicio</a></li>
-                        <li><a href="#" id="userMenuLink">Usuario</a></li>
+                        <li><a href="index.html">Inicio</a></li>
+                        <li><a href="index.html#proyecto">El Proyecto</a></li>
+                        <li><a href="index.html#justificacion">Justificación</a></li>
+                        <li><a href="index.html#alcance">Alcance</a></li>
+                        <li><a href="index.html#objetivos">Objetivos</a></li>
+                        <li class="user-dropdown">
+                            <div class="user-menu-trigger" id="userMenuTrigger">
+                                <i class="fas fa-user-circle"></i>
+                                <span id="userName">Usuario</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="user-dropdown-content" id="userDropdown">
+                                <div class="user-info">
+                                    <div class="user-name" id="dropdownUserName">Usuario Demo</div>
+                                    <div class="user-email" id="dropdownUserEmail">usuario@ejemplo.com</div>
+                                </div>
+                                <button class="logout-btn" id="logoutBtn">
+                                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                </button>
+                            </div>
+                        </li>
                     </ul>
                 </nav>
             </div>
@@ -44,7 +71,7 @@
         <div class="container">
             <div class="dashboard-header">
                 <h2>Panel de Control</h2>
-                <p>Bienvenido al sistema de monitoreo inteligente</p>
+                <p>Bienvenido al sistema de monitoreo inteligente del arbolado urbano</p>
             </div>
 
             <div class="stats-grid">
@@ -67,9 +94,19 @@
                         <span class="stat-number">1</span>
                     </div>
                 </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Estado General</h3>
+                        <span class="stat-number">Estable</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Nueva sección de Recursos (Apps y Juego) -->
+            <!-- Sección de Recursos -->
             <div class="resources-section">
                 <h2 class="section-title">Recursos Adicionales</h2>
                 <div class="resources-grid">
@@ -103,11 +140,13 @@
             <div class="footer-content">
                 <div class="footer-logo">
                     <i class="fas fa-network-wired"></i>
-                    <h3>Árbol Red - Dashboard</h3>
+                    <h3>Árbol Red</h3>
                 </div>
                 <div class="footer-links">
-                    <a href="/">Inicio</a>
-                    <a href="/dashboard">Dashboard</a>
+                    <a href="index.html#proyecto">El Proyecto</a>
+                    <a href="index.html#justificacion">Justificación</a>
+                    <a href="index.html#alcance">Alcance</a>
+                    <a href="index.html#objetivos">Objetivos</a>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -117,7 +156,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/app-shell.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

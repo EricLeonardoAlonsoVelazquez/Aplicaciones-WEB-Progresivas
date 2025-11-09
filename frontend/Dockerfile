@@ -1,8 +1,10 @@
 FROM nginx:alpine
 
-COPY . /usr/share/nginx/html
+# Copiar los archivos del frontend
+COPY frontend/ /usr/share/nginx/html
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Configuración de nginx
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN chown -R nginx:nginx /usr/share/nginx/html
 

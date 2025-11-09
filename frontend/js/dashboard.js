@@ -241,13 +241,35 @@ class DashboardApp {
     }
 
     initEventListeners() {
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'logoutBtn' || e.target.id === 'userLogoutBtn' || 
-                e.target.closest('#logoutBtn') || e.target.closest('#userLogoutBtn')) {
+        // Menú desplegable de usuario
+        const userMenuTrigger = document.getElementById('userMenuTrigger');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (userMenuTrigger && userDropdown) {
+            userMenuTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('active');
+            });
+
+            // Cerrar el menú desplegable si se hace clic fuera de él
+            document.addEventListener('click', () => {
+                userDropdown.classList.remove('active');
+            });
+
+            // Prevenir que el menú se cierre cuando se hace clic dentro de él
+            userDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Cerrar sesión
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.handleLogout();
-            }
-        });
+            });
+        }
 
         // Debug específico para Chrome
         this.chromeDebug();
@@ -273,54 +295,33 @@ class DashboardApp {
     updateUIWithUserInfo() {
         try {
             const user = JSON.parse(localStorage.getItem('user') || 'null');
-            const loginLink = document.getElementById('userMenuLink');
             
-            if (user && user.name && loginLink) {
+            if (user) {
                 console.log('👤 Actualizando UI con información de usuario:', user.name);
-                loginLink.textContent = user.name;
-                loginLink.href = '#';
-                loginLink.style.fontWeight = '500';
-                this.createUserDropdown(loginLink, user);
+                
+                // Actualizar nombre en el menú
+                const userNameElement = document.getElementById('userName');
+                if (userNameElement && user.name) {
+                    userNameElement.textContent = user.name;
+                }
+                
+                // Actualizar información en el dropdown
+                const dropdownUserName = document.getElementById('dropdownUserName');
+                const dropdownUserEmail = document.getElementById('dropdownUserEmail');
+                
+                if (dropdownUserName && user.name) {
+                    dropdownUserName.textContent = user.name;
+                }
+                
+                if (dropdownUserEmail && user.email) {
+                    dropdownUserEmail.textContent = user.email;
+                }
             } else {
                 console.log('❌ No se pudo obtener información del usuario para la UI');
             }
         } catch (error) {
             console.error('💥 Error actualizando UI con información de usuario:', error);
         }
-    }
-
-    createUserDropdown(loginLink, user) {
-        const existingDropdown = document.querySelector('.user-dropdown');
-        if (existingDropdown) {
-            existingDropdown.remove();
-        }
-
-        const dropdownContainer = document.createElement('div');
-        dropdownContainer.className = 'user-dropdown';
-        dropdownContainer.innerHTML = `
-            <div class="user-menu">
-                <span class="user-greeting">Hola, ${user.name}</span>
-                <a href="/" class="dashboard-link">
-                    <i class="fas fa-home"></i> Inicio
-                </a>
-                <button id="userLogoutBtn" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        `;
-        
-        loginLink.parentNode.appendChild(dropdownContainer);
-        
-        loginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            dropdownContainer.classList.toggle('active');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!dropdownContainer.contains(e.target) && e.target !== loginLink) {
-                dropdownContainer.classList.remove('active');
-            }
-        });
     }
 
     async handleLogout() {
@@ -334,7 +335,7 @@ class DashboardApp {
                 console.error('Error al cerrar sesión:', error);
             } finally {
                 this.clearInvalidTokens();
-                window.location.href = '/';
+                window.location.href = 'index.html';
             }
         }
     }
@@ -343,18 +344,23 @@ class DashboardApp {
         // Animación simple para los números de estadísticas
         const statNumbers = document.querySelectorAll('.stat-number');
         statNumbers.forEach(stat => {
-            const finalNumber = parseInt(stat.textContent);
-            let current = 0;
-            const increment = finalNumber / 50;
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= finalNumber) {
-                    stat.textContent = finalNumber;
-                    clearInterval(timer);
-                } else {
-                    stat.textContent = Math.floor(current);
-                }
-            }, 30);
+            const originalText = stat.textContent;
+            
+            // Solo animar si es un número
+            if (/^\d+$/.test(originalText)) {
+                const finalNumber = parseInt(originalText);
+                let current = 0;
+                const increment = finalNumber / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= finalNumber) {
+                        stat.textContent = finalNumber;
+                        clearInterval(timer);
+                    } else {
+                        stat.textContent = Math.floor(current);
+                    }
+                }, 30);
+            }
         });
     }
 
