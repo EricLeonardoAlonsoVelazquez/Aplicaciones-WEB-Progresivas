@@ -1,7 +1,7 @@
 // service-worker.js
 console.log('🔧 Service Worker cargando...');
 
-const CACHE_NAME = 'arbored-v4';
+const CACHE_NAME = 'arbored-v5';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -139,5 +139,6 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
 
 console.log('✅ Service Worker cargado correctamente');
