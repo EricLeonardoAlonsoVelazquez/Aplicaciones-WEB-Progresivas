@@ -1,13 +1,17 @@
 FROM node:18-alpine
 
-WORKDIR /app/backend
+WORKDIR /app
 
+# Copiar backend
 COPY backend/package*.json ./
 RUN npm install
 
 COPY backend/ ./
 
-RUN mkdir -p /app/backend/config && \
+# Copiar frontend a la raíz del app
+COPY frontend/ ./frontend/
+
+RUN mkdir -p /app/config && \
     chown -R node:node /app
 
 USER node
