@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth');
+const readingRoutes = require('./routes/readings');
 const path = require('path');
-const fs = require('fs'); // Añade esto
 const config = require('./config/config');
 const { extractToken } = require('./middleware/auth');
 
@@ -17,21 +17,10 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🔥 CORRECCIÓN: Rutas estáticas - usa rutas absolutas dentro del contenedor
-app.use(express.static(path.join(__dirname, 'frontend')));
-app.use('/screenshots', express.static(path.join(__dirname, 'frontend/screenshots')));
-
-// 🔥 DEBUG: Verificar estructura de archivos al iniciar
-console.log('📍 Directorio actual:', __dirname);
-console.log('📂 Contenido del directorio:', fs.readdirSync(__dirname));
-
-const frontendPath = path.join(__dirname, 'frontend');
-if (fs.existsSync(frontendPath)) {
-  console.log('✅ Directorio frontend encontrado:', frontendPath);
-  console.log('📁 Contenido de frontend:', fs.readdirSync(frontendPath));
-} else {
-  console.log('❌ Directorio frontend NO existe:', frontendPath);
-}
+// Servir archivos estáticos
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/screenshots', express.static(path.join(__dirname, '../frontend/screenshots')));
+app.use('/api/readings', readingRoutes);
 
 const verifyAuthentication = async (token) => {
   if (!token) return { authenticated: false, user: null };
@@ -50,25 +39,6 @@ const verifyAuthentication = async (token) => {
   }
 };
 
-// Función para servir archivos de forma segura
-const serveFileSafe = (res, filePath, fallbackPath = null) => {
-  try {
-    if (fs.existsSync(filePath)) {
-      console.log('✅ Sirviendo archivo:', filePath);
-      return res.sendFile(filePath);
-    } else if (fallbackPath && fs.existsSync(fallbackPath)) {
-      console.log('🔄 Usando fallback:', fallbackPath);
-      return res.sendFile(fallbackPath);
-    } else {
-      console.log('❌ Archivo no encontrado:', filePath);
-      return res.status(404).send('Archivo no encontrado');
-    }
-  } catch (error) {
-    console.log('💥 Error sirviendo archivo:', error.message);
-    return res.status(500).send('Error interno del servidor');
-  }
-};
-
 // 🔥 CORRECCIÓN: Definir rutas públicas y protegidas
 app.use(async (req, res, next) => {
   const requestedPath = req.path;
@@ -82,7 +52,6 @@ app.use(async (req, res, next) => {
     '/health', 
     '/manifest.json',
     '/service-worker.js',
-    '/favicon.ico',
     '/api/auth/login',
     '/api/auth/register',
     '/index.html'
@@ -97,8 +66,7 @@ app.use(async (req, res, next) => {
   // RUTA RAÍZ: Siempre pública, muestra index.html
   if (requestedPath === '/') {
     console.log('🏠 Ruta raíz solicitada - PÚBLICA');
-    const indexPath = path.join(__dirname, 'frontend', 'index.html');
-    return serveFileSafe(res, indexPath);
+    return res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
   }
   
   // RUTA LOGIN: Pública, pero si ya está autenticado redirige a dashboard
@@ -148,11 +116,10 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// 🔥 CORRECCIÓN: Rutas para servir archivos HTML
+// 🔥 NUEVA RUTA: Dashboard protegido
 app.get('/dashboard', (req, res) => {
   console.log('📊 Sirviendo dashboard para usuario:', req.user.email);
-  const dashboardPath = path.join(__dirname, 'frontend', 'dashboard.html');
-  serveFileSafe(res, dashboardPath);
+  res.sendFile(path.join(__dirname, '../frontend', 'dashboard.html'));
 });
 
 app.get('/dashboard.html', (req, res) => {
@@ -160,27 +127,20 @@ app.get('/dashboard.html', (req, res) => {
   res.redirect('/dashboard');
 });
 
+// Rutas existentes
 app.get('/login', (req, res) => {
   console.log('🌐 Sirviendo página de login');
-  const loginPath = path.join(__dirname, 'frontend', 'login.html');
-  serveFileSafe(res, loginPath);
+  res.sendFile(path.join(__dirname, '../frontend', 'login.html'));
 });
 
 app.get('/index', (req, res) => {
   console.log('🏠 Sirviendo página principal (index)');
-  const indexPath = path.join(__dirname, 'frontend', 'index.html');
-  serveFileSafe(res, indexPath);
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
 app.get('/index.html', (req, res) => {
   console.log('🏠 Sirviendo página principal via index.html');
   res.redirect('/index');
-});
-
-// Ruta para favicon.ico
-app.get('/favicon.ico', (req, res) => {
-  const faviconPath = path.join(__dirname, 'frontend', 'favicon.ico');
-  serveFileSafe(res, faviconPath, path.join(__dirname, 'frontend', 'icons', 'favicon.ico'));
 });
 
 app.get('/health', (req, res) => {
@@ -193,23 +153,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 
-// Manejo de rutas no encontradas
 app.use('*', (req, res) => {
   console.log('❌ Ruta no encontrada:', req.originalUrl);
-  
-  // Intentar servir como archivo estático primero
-  const filePath = path.join(__dirname, 'frontend', req.path);
-  if (fs.existsSync(filePath)) {
-    return res.sendFile(filePath);
-  }
-  
-  // Si no existe, redirigir al index (SPA)
-  const indexPath = path.join(__dirname, 'frontend', 'index.html');
-  if (fs.existsSync(indexPath)) {
-    return res.sendFile(indexPath);
-  }
-  
-  res.status(404).send('Página no encontrada');
+  res.redirect('/');
 });
 
 app.use((error, req, res, next) => {
@@ -220,7 +166,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(config.port, '0.0.0.0', () => { // 🔥 Añade '0.0.0.0' para Render
+app.listen(config.port, () => {
   console.log(`🚀 Servidor ejecutándose en http://localhost:${config.port}`);
   console.log(`🏠 Página principal: http://localhost:${config.port}/ (PÚBLICA)`);
   console.log(`🔑 Login: http://localhost:${config.port}/login (PÚBLICA)`);

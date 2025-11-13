@@ -11,7 +11,6 @@ class UserService {
         throw new Error(validationErrors.join(', '));
       }
 
-      await user.hashPassword();
       
       const userRef = db.collection('users').doc();
       user.id = userRef.id;
@@ -34,59 +33,69 @@ class UserService {
   }
 
   async findByEmail(email) {
-    try {
-      if (!email || email.trim().length === 0) {
-        throw new Error('Email es requerido');
-      }
-
-      const usersRef = db.collection('users');
-      const snapshot = await usersRef.where('email', '==', email).get();
-      
-      if (snapshot.empty) {
-        return null;
-      }
-      
-      let userData;
-      snapshot.forEach(doc => {
-        userData = doc.data();
-      });
-      
-      return new User(userData);
-    } catch (error) {
-      console.error('Error finding user by email:', error);
-      
-      if (error.code === 5 || error.message.includes('NOT_FOUND')) {
-        return null;
-      }
-      
-      throw new Error('Error finding user: ' + error.message);
+  try {
+    if (!email || email.trim().length === 0) {
+      throw new Error('Email es requerido');
     }
+
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.where('email', '==', email).get();
+    
+    if (snapshot.empty) {
+      return null;
+    }
+    
+    let userData;
+    snapshot.forEach(doc => {
+      userData = doc.data();
+      // Asegurarnos de que el ID del documento se asigne al userData
+      if (!userData.id) {
+        userData.id = doc.id;
+      }
+    });
+    
+    return new User(userData);
+  } catch (error) {
+    console.error('Error finding user by email:', error);
+    
+    if (error.code === 5 || error.message.includes('NOT_FOUND')) {
+      return null;
+    }
+    
+    throw new Error('Error finding user: ' + error.message);
   }
+}
 
   async findById(id) {
-    try {
-      if (!id || id.trim().length === 0) {
-        throw new Error('ID es requerido');
-      }
-
-      const userRef = db.collection('users').doc(id);
-      const doc = await userRef.get();
-      
-      if (!doc.exists) {
-        return null;
-      }
-      
-      return new User(doc.data());
-    } catch (error) {
-      console.error('Error finding user by ID:', error);
-      
-      if (error.code === 5 || error.message.includes('NOT_FOUND')) {
-        return null;
-      }
-      
-      throw new Error('Error finding user: ' + error.message);
+  try {
+    if (!id || id.trim().length === 0) {
+      throw new Error('ID es requerido');
     }
+
+    const userRef = db.collection('users').doc(id);
+    const doc = await userRef.get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+    
+    const userData = doc.data();
+    // Asegurarnos de que el ID esté presente
+    if (!userData.id) {
+      userData.id = doc.id;
+    }
+    
+    return new User(userData);
+  } catch (error) {
+    console.error('Error finding user by ID:', error);
+    
+    if (error.code === 5 || error.message.includes('NOT_FOUND')) {
+      return null;
+    }
+    
+    throw new Error('Error finding user: ' + error.message);
   }
+}
 
   async updateLastAccess(userId) {
     try {

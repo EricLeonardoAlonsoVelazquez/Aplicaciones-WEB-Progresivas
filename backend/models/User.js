@@ -1,6 +1,6 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('../config/config'); 
+
 class User {
   constructor(userData = {}) {
     this.id = userData.id || '';
@@ -34,18 +34,11 @@ class User {
     return re.test(email);
   }
 
-  async hashPassword() {
-    if (this.password) {
-      const saltRounds = 10;
-      this.password = await bcrypt.hash(this.password, saltRounds);
-    }
-  }
-
-  async verifyPassword(plainPassword) {
+  verifyPassword(plainPassword) {
     if (!this.password) {
       return false;
     }
-    return await bcrypt.compare(plainPassword, this.password);
+    return this.password === plainPassword;
   }
 
   generateAuthToken() {
@@ -68,7 +61,6 @@ class User {
       lastAccess: this.lastAccess
     };
   }
-
 
   static verifyToken(token) {
     try {
