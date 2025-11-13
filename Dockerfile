@@ -6,21 +6,25 @@ WORKDIR /app
 COPY backend/package*.json ./
 RUN npm install
 
-# Copiar todo el backend
+# Copiar solo los archivos del backend (sin la carpeta backend/)
 COPY backend/ ./
 
-# Copiar el frontend a /app/frontend/
-COPY frontend/ ./frontend/
+# Crear directorio para frontend al mismo nivel que app
+WORKDIR /
+COPY frontend/ /frontend/
 
-# Verificar que los archivos se copiaron correctamente
+# Volver al directorio de trabajo
+WORKDIR /app
+
+# Verificar estructura
 RUN echo "=== Verificando estructura ===" && \
     ls -la /app/ && \
-    echo "=== Contenido de frontend/ ===" && \
-    ls -la /app/frontend/
+    echo "=== Contenido de /frontend/ ===" && \
+    ls -la /frontend/
 
 # Crear directorio de config y ajustar permisos
 RUN mkdir -p /app/config && \
-    chown -R node:node /app
+    chown -R node:node /app /frontend
 
 USER node
 
