@@ -1,25 +1,25 @@
 FROM node:18-alpine
 
-WORKDIR /app
+# Crear estructura de directorios como en desarrollo
+WORKDIR /app/backend
 
-# Copiar backend
+# Copiar e instalar backend
 COPY backend/package*.json ./
 RUN npm install
 
-# Copiar backend completo
 COPY backend/ ./
 
-# Copiar frontend a /app/frontend (mismo nivel que server.js)
+# Crear directorio frontend al nivel correcto (../frontend desde backend/)
+WORKDIR /app
 COPY frontend/ ./frontend/
 
-# Verificar estructura
-RUN echo "=== Estructura final ===" && \
-    ls -la && \
-    echo "=== Frontend ===" && \
-    ls -la frontend/
+WORKDIR /app/backend
 
-# Crear directorios necesarios
-RUN mkdir -p config
+# Verificar
+RUN echo "=== Desde backend/ ===" && \
+    ls -la && \
+    echo "=== Frontend (../frontend) ===" && \
+    ls -la ../frontend/
 
 EXPOSE 3000
 
