@@ -2,31 +2,24 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar package.json e instalar dependencias del backend
+# Copiar backend
 COPY backend/package*.json ./
 RUN npm install
 
-# Copiar solo los archivos del backend (sin la carpeta backend/)
+# Copiar backend completo
 COPY backend/ ./
 
-# Crear directorio para frontend al mismo nivel que app
-WORKDIR /
-COPY frontend/ /frontend/
-
-# Volver al directorio de trabajo
-WORKDIR /app
+# Copiar frontend a /app/frontend (mismo nivel que server.js)
+COPY frontend/ ./frontend/
 
 # Verificar estructura
-RUN echo "=== Verificando estructura ===" && \
-    ls -la /app/ && \
-    echo "=== Contenido de /frontend/ ===" && \
-    ls -la /frontend/
+RUN echo "=== Estructura final ===" && \
+    ls -la && \
+    echo "=== Frontend ===" && \
+    ls -la frontend/
 
-# Crear directorio de config y ajustar permisos
-RUN mkdir -p /app/config && \
-    chown -R node:node /app /frontend
-
-USER node
+# Crear directorios necesarios
+RUN mkdir -p config
 
 EXPOSE 3000
 
