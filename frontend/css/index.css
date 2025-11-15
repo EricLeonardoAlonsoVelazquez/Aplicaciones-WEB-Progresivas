@@ -210,7 +210,7 @@ nav a:hover::after {
     width: 100%;
 }
 
-/* User Dropdown Style for Login Link */
+/* User Dropdown - IDÉNTICO AL DASHBOARD */
 .user-dropdown {
     position: relative;
 }
@@ -235,6 +235,95 @@ nav a:hover::after {
 .user-menu-trigger i {
     font-size: 1.2rem;
     color: #2d5e3d;
+}
+
+.user-dropdown-content {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(26, 60, 39, 0.15);
+    padding: 20px;
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-dropdown-content.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-info {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #1a3c27;
+    margin-bottom: 5px;
+}
+
+.user-email {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.dashboard-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 15px;
+    background: none;
+    border: 1px solid #2d5e3d;
+    color: #2d5e3d;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-decoration: none;
+    margin-bottom: 10px;
+    text-align: center;
+    justify-content: center;
+}
+
+.dashboard-link:hover {
+    background: #2d5e3d;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 15px;
+    background: none;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.logout-btn:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-1px);
 }
 
 /* Hero Section */
@@ -668,12 +757,8 @@ footer::before {
     transform: translateY(0);
 }
 
-/* ============================================= */
-/* MEDIA QUERIES PARA RESPONSIVIDAD - INDEX */
-/* ============================================= */
-
+/* Responsive para el header */
 @media (max-width: 768px) {
-    /* Header y navegación - IDÉNTICO AL DASHBOARD */
     .header-content {
         flex-direction: column;
         gap: 15px;
@@ -687,6 +772,10 @@ footer::before {
     nav li {
         margin-left: 15px;
         margin-right: 15px;
+    }
+    
+    .user-dropdown-content {
+        right: -50px;
     }
     
     /* Hero section */

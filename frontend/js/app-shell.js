@@ -18,7 +18,15 @@ class AppShell {
         
         try {
             await this.setupAppShell();
-            await this.registerServiceWorker();
+            
+            // SOLO registrar Service Worker si no hay conexión
+            if (!navigator.onLine) {
+                console.log('🌐 Sin conexión - Registrando Service Worker');
+                await this.registerServiceWorker();
+            } else {
+                console.log('✅ Con conexión - Service Worker omitido');
+            }
+            
             this.setupPWAInstall();
             this.isInitialized = true;
             this.isInitializing = false;
@@ -28,7 +36,7 @@ class AppShell {
         } catch (error) {
             console.error('❌ Error inicializando App Shell:', error);
             this.isInitializing = false;
-            this.executeReadyCallbacks(); // Ejecutar callbacks incluso con error
+            this.executeReadyCallbacks();
         }
     }
 
@@ -40,7 +48,6 @@ class AppShell {
                 });
                 console.log('✅ Service Worker registrado:', registration.scope);
                 
-                // Verificar actualizaciones
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     console.log('🔄 Nuevo Service Worker encontrado:', newWorker);
@@ -59,6 +66,18 @@ class AppShell {
             console.log('⚠️ Service Worker no soportado en este navegador');
             return null;
         }
+    }
+
+    // Escuchar cambios de conexión para registrar Service Worker cuando se pierda conexión
+    setupConnectionListener() {
+        window.addEventListener('online', () => {
+            console.log('✅ Conexión restaurada');
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('❌ Sin conexión - Registrando Service Worker');
+            this.registerServiceWorker();
+        });
     }
 
     setupPWAInstall() {
@@ -300,7 +319,8 @@ class AppShell {
             detail: { 
                 timestamp: new Date(),
                 appShell: this,
-                pwa: true
+                pwa: true,
+                online: navigator.onLine
             }
         });
         window.dispatchEvent(event);

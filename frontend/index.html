@@ -58,7 +58,7 @@
                 <p>Conectando naturaleza y tecnología para la gestión sostenible del arbolado urbano mediante sensores IoT, aplicaciones móviles y web progresivas.</p>
                 <div class="hero-buttons">
                     <a href="#proyecto" class="btn-primary">Conoce Más</a>
-                    <!-- 🔥 NUEVO: Botón para ir al Dashboard -->
+
                     <a href="/dashboard" class="btn-secondary" id="dashboardBtn" style="display: none;">
                         <i class="fas fa-tachometer-alt"></i> Ir al Dashboard
                     </a>
@@ -208,7 +208,28 @@
     </footer>
 
     <!-- Scripts en orden CORRECTO -->
-    <script src="js/app-shell.js"></script>
+        <script>
+        // Mostrar estado de conexión
+        function updateOnlineStatus() {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                if (navigator.onLine) {
+                    statusElement.style.display = 'none';
+                } else {
+                    statusElement.style.display = 'block';
+                    statusElement.textContent = '🔴 Modo offline - Algunas funciones pueden no estar disponibles';
+                }
+            }
+        }
+
+        // Escuchar cambios de conexión
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Estado inicial
+        document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+    </script>
     <script src="js/index.js"></script>
+    <script src="js/app-shell.js"></script>
 </body>
 </html>

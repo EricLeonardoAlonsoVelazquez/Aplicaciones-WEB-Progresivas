@@ -356,9 +356,6 @@ class ProtectedApp {
         dropdownContainer.innerHTML = `
             <div class="user-menu">
                 <span class="user-greeting">Hola, ${user.name}</span>
-                <a href="/dashboard" class="dashboard-link">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
                 <button id="userLogoutBtn" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </button>

@@ -155,7 +155,27 @@
         </div>
     </footer>
 
-    <!-- Scripts -->
+        <script>
+        // Mostrar estado de conexión
+        function updateOnlineStatus() {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                if (navigator.onLine) {
+                    statusElement.style.display = 'none';
+                } else {
+                    statusElement.style.display = 'block';
+                    statusElement.textContent = '🔴 Modo offline - Algunas funciones pueden no estar disponibles';
+                }
+            }
+        }
+
+        // Escuchar cambios de conexión
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Estado inicial
+        document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+    </script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>
