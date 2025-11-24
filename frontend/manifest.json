@@ -13,8 +13,8 @@
   
   "protocol_handlers": [
     {
-      "protocol": "web+arbored",
-      "url": "/?protocol=%s"
+      "protocol": "https",
+      "url": "/?url=%s"
     }
   ],
 
