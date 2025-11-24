@@ -13,15 +13,15 @@
   
   "protocol_handlers": [
     {
-      "protocol": "https",
-      "url": "/"
+      "protocol": "web+arbored",
+      "url": "/?protocol=%s"
     }
   ],
 
   "window_controls_overlay": {
     "enabled": true
   },
-  
+
   "icons": [
     {
       "src": "icons/ArbolRed.png",
@@ -46,5 +46,3 @@
     }
   ]
 }
-
-
