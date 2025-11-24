@@ -13,14 +13,10 @@
   
   "protocol_handlers": [
     {
-      "protocol": "https",
-      "url": "/?url=%s"
+      "protocol": "web+arbored",
+      "url": "/?protocol=%s"
     }
   ],
-
-  "window_controls_overlay": {
-    "enabled": true
-  },
 
   "icons": [
     {
