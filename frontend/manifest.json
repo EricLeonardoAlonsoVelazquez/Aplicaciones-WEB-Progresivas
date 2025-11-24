@@ -14,10 +14,14 @@
   "protocol_handlers": [
     {
       "protocol": "https",
-      "url": "/
+      "url": "/"
     }
   ],
 
+  "window_controls_overlay": {
+    "enabled": true
+  },
+  
   "icons": [
     {
       "src": "icons/ArbolRed.png",
@@ -42,4 +46,5 @@
     }
   ]
 }
+
 
