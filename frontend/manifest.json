@@ -10,6 +10,14 @@
   "scope": "/",
   "lang": "es",
   "categories": ["environment", "productivity", "utilities"],
+  
+  "protocol_handlers": [
+    {
+      "protocol": "web+arbored",
+      "url": "/?protocol=%s"
+    }
+  ],
+
   "icons": [
     {
       "src": "icons/ArbolRed.png",
