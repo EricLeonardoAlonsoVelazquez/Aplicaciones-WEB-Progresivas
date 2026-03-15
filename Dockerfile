@@ -7,7 +7,7 @@ RUN npm install
 
 COPY backend/ ./
 
-WORKDIR /app
+WORKDIR .
 COPY frontend/ ./frontend/
 
 WORKDIR /app/backend
