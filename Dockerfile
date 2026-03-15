@@ -1,23 +1,26 @@
 FROM node:18-alpine
 
-WORKDIR /app/backend
+# Create app directory
+WORKDIR /app
 
-COPY backend/package*.json ./
-RUN npm install
+# Copy backend files
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
 
-COPY backend/ ./
+COPY backend/ ./backend/
 
-WORKDIR .
+# Copy frontend files
 COPY frontend/ ./frontend/
 
+# Set working directory to backend for running the server
 WORKDIR /app/backend
 
+# Verify the directory structure
 RUN echo "=== Desde backend/ ===" && \
     ls -la && \
-    echo "=== Frontend (../frontend) ===" && \
-    ls -la ../frontend/
+    echo "=== Frontend (/app/frontend) ===" && \
+    ls -la /app/frontend/
 
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-
