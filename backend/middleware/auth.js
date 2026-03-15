@@ -1,105 +1,124 @@
 const jwt = require('jsonwebtoken');
-const userService = require('../services/userService');
 const config = require('../config/config');
+const { db } = require('../config/firebase');
 
+// Extraer token de diferentes fuentes
 const extractToken = (req) => {
-  console.log('🍪 Cookies en middleware:', req.cookies);
-  console.log('📨 Authorization header:', req.headers.authorization);
+  // De headers
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return req.headers.authorization.substring(7);
+  }
   
+  // De cookies
   if (req.cookies && req.cookies.authToken) {
-    console.log('✅ Token encontrado en cookies');
     return req.cookies.authToken;
   }
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    console.log('✅ Token encontrado en headers');
-    return authHeader.substring(7);
+  
+  // De query string
+  if (req.query && req.query.token) {
+    return req.query.token;
   }
   
-  console.log('❌ No se encontró token');
   return null;
 };
 
+// Verificar token
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, config.jwt.secret);
+  } catch (error) {
+    throw new Error('Token inválido o expirado');
+  }
+};
+
+// Verificar autenticación
+const verifyAuthentication = async (token) => {
+  if (!token) return { authenticated: false, user: null };
+  
+  try {
+    const decoded = verifyToken(token);
+
+    const usersRef = db.collection('usuarios');
+    const snapshot = await usersRef.where('email', '==', decoded.email).limit(1).get();
+    
+    if (snapshot.empty) {
+      return { authenticated: false, user: null };
+    }
+    
+    let user = null;
+    snapshot.forEach(doc => {
+      user = { id: doc.id, ...doc.data() };
+    });
+    
+    return { authenticated: true, user };
+  } catch (error) {
+    console.log('❌ Error verificando token:', error.message);
+    return { authenticated: false, user: null };
+  }
+};
+
+// Middleware para rutas protegidas
 const authenticateToken = async (req, res, next) => {
   const token = extractToken(req);
-
-  console.log('🔐 Verificando token para API:', req.path);
-
+  
   if (!token) {
-    console.log('❌ Token no proporcionado');
     return res.status(401).json({
       success: false,
-      message: 'Token de acceso requerido',
-      code: 'TOKEN_REQUIRED'
+      message: 'Acceso no autorizado'
     });
   }
-
+  
   try {
-    const decoded = jwt.verify(token, config.jwt.secret);
-    console.log('✅ Token válido para usuario:', decoded.userId);
+    const authResult = await verifyAuthentication(token);
     
-    const user = await userService.findById(decoded.userId);
-    
-    if (!user) {
-      console.log('❌ Usuario no encontrado para token válido');
+    if (!authResult.authenticated) {
       return res.status(401).json({
         success: false,
-        message: 'Usuario no encontrado',
-        code: 'USER_NOT_FOUND'
+        message: 'Token inválido o expirado'
       });
     }
-
-    req.user = user.toJSON();
+    
+    req.user = authResult.user;
     next();
   } catch (error) {
-    console.error('❌ Error verificando token:', error.message);
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(403).json({
-        success: false,
-        message: 'Token expirado',
-        code: 'TOKEN_EXPIRED'
-      });
-    }
-    
-    return res.status(403).json({
+    console.error('Error en autenticación:', error);
+    return res.status(401).json({
       success: false,
-      message: 'Token inválido',
-      code: 'TOKEN_INVALID'
+      message: 'Error en autenticación'
     });
   }
 };
 
-const generateToken = (userId) => {
+// Generar token
+const generateToken = (userId, email) => {
   return jwt.sign(
-    { 
-      userId: userId,
-      iat: Math.floor(Date.now() / 1000) 
-    },
+    { userId, email },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn }
   );
 };
 
+// Establecer cookie de autenticación
 const setAuthCookie = (res, token) => {
-  console.log('🍪 Estableciendo cookie authToken');
   res.cookie('authToken', token, {
-    httpOnly: false, 
-    secure: false, 
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
-    path: '/' 
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
   });
 };
 
+// Limpiar cookie de autenticación
 const clearAuthCookie = (res) => {
   res.clearCookie('authToken');
 };
 
 module.exports = {
+  extractToken,
+  verifyToken,
+  verifyAuthentication,
   authenticateToken,
   generateToken,
   setAuthCookie,
-  clearAuthCookie,
-  extractToken
+  clearAuthCookie
 };

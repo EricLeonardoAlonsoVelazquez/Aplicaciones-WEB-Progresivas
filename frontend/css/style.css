@@ -5,6 +5,12 @@
     font-family: 'Poppins', sans-serif;
 }
 
+.logo-img {
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+        }
+
 body {
     background: linear-gradient(135deg, #1a3c27 0%, #2d5e3d 50%, #3a7d52 100%);
     display: flex;
